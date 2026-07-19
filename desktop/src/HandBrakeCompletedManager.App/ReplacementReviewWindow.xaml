@@ -3,12 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Replacement safety review"
         Width="760"
-        Height="610"
+        Height="720"
         MinWidth="640"
-        MinHeight="500"
+        MinHeight="600"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -24,7 +25,8 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <TextBlock FontWeight="SemiBold"
-                           Text="Review only — this window cannot copy, move, rename, or delete files." />
+                           Text="Safety boundary — this window can only create and verify a separate temporary copy. It cannot replace or delete files."
+                           TextWrapping="Wrap" />
             </Border>
         </StackPanel>
 
@@ -57,6 +59,29 @@
         </Grid>
 
         <Border Grid.Row="2"
+                Margin="0,0,0,14"
+                Padding="12"
+                Background="#EFF7FF"
+                BorderBrush="#9BC2E6"
+                BorderThickness="1"
+                CornerRadius="4">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Text="Temporary-copy preparation" />
+                <TextBlock Margin="0,4,0,10"
+                           Text="Creates a new .hbcm-copying file, records progress, and verifies size and SHA-256. The source and converted files remain unchanged."
+                           TextWrapping="Wrap" />
+                <ProgressBar x:Name="CopyProgressBar" Height="18" Minimum="0" Maximum="100" Value="0" />
+                <TextBlock x:Name="CopyStatusText" Margin="0,5,0,0" Text="Not started." TextWrapping="Wrap" />
+                <TextBlock x:Name="RecoveryStatusText"
+                           Margin="0,8,0,0"
+                           FontWeight="SemiBold"
+                           Foreground="#7A4B00"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3"
                 Padding="12"
                 Background="#F8FAFB"
                 BorderBrush="#DDE2E7"
@@ -72,8 +97,21 @@
             </DockPanel>
         </Border>
 
-        <StackPanel Grid.Row="3" Margin="0,16,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button Width="90" Height="32" IsDefault="True" Click="CloseButton_Click" Content="Close" />
+        <StackPanel Grid.Row="4" Margin="0,16,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button x:Name="PrepareCopyButton"
+                    Width="170"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    Click="PrepareCopyButton_Click"
+                    Content="Create temporary copy" />
+            <Button x:Name="CancelCopyButton"
+                    Width="100"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    Click="CancelCopyButton_Click"
+                    Content="Cancel copy" />
+            <Button Width="90" Height="32" IsCancel="True" Click="CloseButton_Click" Content="Close" />
         </StackPanel>
     </Grid>
 </Window>

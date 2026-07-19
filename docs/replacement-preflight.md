@@ -1,6 +1,6 @@
 # Replacement safety preflight
 
-Phase 2 begins with a review-only replacement preflight. It calculates the intended paths, examines current file metadata, reports blocking conditions and warnings, and displays the plan without changing any file.
+Phase 2 begins with a replacement preflight. It calculates the intended paths, examines current file metadata, reports blocking conditions and warnings, and displays the plan before any temporary copy can start.
 
 ## Open the review
 
@@ -12,7 +12,7 @@ Select a completed encode and choose **Review replacement**. The review displays
 - Original-backup path under `HandBrake Original Backup` in the source directory.
 - Every blocking issue and warning found from the current file-system state.
 
-The window is deliberately review-only. It has no command that copies, moves, renames, backs up, replaces, or deletes a file.
+When preflight passes, the window can create and verify a separate temporary file after explicit user confirmation. It cannot move, rename, back up, replace, or delete the source or converted file.
 
 ## Blocking checks
 
@@ -50,16 +50,18 @@ SQLite constraints reject unknown state values, invalid file sizes, negative or 
 
 The backend can now create a new `.hbcm-copying` file by streaming the converted output, persisting progress, and verifying the completed copy with its size and SHA-256 digest. It re-runs preflight immediately before copying and confirms that the converted file remains unchanged while it is read.
 
-This capability is not exposed in the interface. Cancellation and failures leave the temporary file and durable operation state available for later recovery decisions; they do not automatically delete evidence of an interrupted operation. See [Verified temporary copy](temporary-copy-engine.md).
+The review window exposes this capability with the exact temporary path, explicit confirmation, live byte progress, and a cancellation command. Cancellation and failures leave the temporary file and durable operation state available for later recovery decisions; they do not automatically delete evidence of an interrupted operation. See [Verified temporary copy](temporary-copy-engine.md).
+
+When the review is opened again, it displays the latest related operation. An incomplete operation or any existing temporary file blocks a new copy. A failed or cancelled attempt with no remaining partial file is reported but may be retried after its cause is resolved.
 
 ## Still disabled
 
 Passing preflight does not enable source replacement. The following must be implemented and tested before any destructive transition is available:
 
-1. User-facing execution, progress, and cancellation controls.
+1. Explicit recovery cleanup and retry controls for retained partial files.
 2. Original backup with conflict-safe naming.
 3. Atomic finalisation.
-4. Restart recovery, retry, and cleanup decisions.
+4. Restart continuation decisions.
 5. Undo and restore-original behavior.
 6. Explicit final user confirmation.
 

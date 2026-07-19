@@ -49,7 +49,7 @@ The generated folder and ZIP archive are placed under `artifacts\portable\win-x6
 
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
-Phase 2 development includes a review-only replacement safety preflight, persistent recovery state, and a backend engine that creates and verifies a temporary copy. The engine is not yet exposed in the interface, and no source replacement or deletion operation is enabled.
+Phase 2 development includes replacement safety preflight, persistent recovery state, and an explicitly confirmed user workflow that creates and verifies a separate temporary copy. No source backup, replacement, or deletion operation is enabled.
 
 ## Implemented capabilities
 
@@ -71,9 +71,9 @@ The current Phase 1 implementation provides:
 - Non-fatal daily diagnostic logs cover desktop and receiver operational events.
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
 - Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
-- A review-only replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before any operation can be planned.
-- Persistent replacement stages and progress fields provide the database foundation for interruption recovery; execution remains disabled.
-- A backend temporary-copy engine streams the converted file to a new `.hbcm-copying` file, persists progress, supports cancellation, and verifies size and SHA-256 without modifying either original file.
+- A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
+- Persistent replacement stages and progress fields support interruption recovery; source backup and final replacement remain disabled.
+- The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation

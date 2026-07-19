@@ -2,7 +2,15 @@
 
 The Phase 2 backend can safely prepare a converted file for a future replacement operation. It creates a separate temporary file beside the planned final file and never changes the source file, converted output, or final path.
 
-This engine is currently an internal foundation. It is not available from the application interface and does not perform source backup or replacement.
+The engine is available from **Review replacement** after preflight succeeds. It does not perform source backup or replacement.
+
+## User workflow
+
+The review window displays the exact temporary path and requires explicit confirmation before copying. During the operation it shows byte and percentage progress and provides a cancellation command. Closing the window during an active copy asks whether to cancel, waits for the operation to stop, and then closes.
+
+Success displays the verified byte count and SHA-256 digest. Cancellation or failure clearly states that original files were unchanged and that any partial temporary file remains for recovery review.
+
+Opening the review again shows the latest durable operation state. A partial file or incomplete operation prevents another attempt from overwriting recovery evidence. A failed attempt that created no partial file can be retried after the underlying problem is fixed.
 
 ## Copy workflow
 

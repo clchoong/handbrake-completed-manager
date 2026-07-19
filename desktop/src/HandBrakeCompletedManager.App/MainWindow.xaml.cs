@@ -20,6 +20,8 @@ public partial class MainWindow : Window
     private readonly HandBrakeConnectionTester _connectionTester = new();
     private readonly WindowsFileActionService _fileActions = new();
     private readonly ReplacementPreflightService _replacementPreflightService = new();
+    private readonly ReplacementOperationRepository _replacementOperationRepository;
+    private readonly TemporaryCopyService _temporaryCopyService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -42,6 +44,8 @@ public partial class MainWindow : Window
             ? "Receiver ready - copy these values into HandBrake"
             : "Receiver is missing - rebuild the desktop solution before setup";
         _repository = new CompletedEncodeRepository(_databasePath);
+        _replacementOperationRepository = new ReplacementOperationRepository(_databasePath);
+        _temporaryCopyService = new TemporaryCopyService(_replacementOperationRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -510,16 +514,37 @@ public partial class MainWindow : Window
         try
         {
             var plan = _replacementPreflightService.Review(row.Record);
-            var reviewWindow = new ReplacementReviewWindow(plan) { Owner = this };
+            var reviewWindow = new ReplacementReviewWindow(
+                plan,
+                _temporaryCopyService,
+                _replacementOperationRepository)
+            {
+                Owner = this
+            };
             reviewWindow.ShowDialog();
-            StatusText.Text = plan.CanProceed
-                ? "Replacement preflight passed. No files were changed."
-                : "Replacement preflight found blocking issues. No files were changed.";
+            StatusText.Text = reviewWindow.CopyResult is not null
+                ? "Verified temporary copy created. Source backup and replacement remain disabled."
+                : reviewWindow.CopyWasCancelled
+                    ? "Temporary copy cancelled. Any partial file was retained; original files were unchanged."
+                    : reviewWindow.CopyFailure is not null
+                        ? $"Temporary copy failed: {reviewWindow.CopyFailure.Message}"
+                        : plan.CanProceed
+                            ? "Replacement preflight passed. No original files were changed."
+                            : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
-                plan.CanProceed ? DiagnosticLogLevel.Information : DiagnosticLogLevel.Warning,
-                plan.CanProceed
-                    ? "A replacement preflight review passed."
-                    : "A replacement preflight review found blocking issues.");
+                reviewWindow.CopyFailure is not null || !plan.CanProceed
+                    ? DiagnosticLogLevel.Warning
+                    : DiagnosticLogLevel.Information,
+                reviewWindow.CopyResult is not null
+                    ? "A replacement temporary copy was created and verified."
+                    : reviewWindow.CopyWasCancelled
+                        ? "A replacement temporary copy was cancelled."
+                        : reviewWindow.CopyFailure is not null
+                            ? "A replacement temporary copy failed."
+                            : plan.CanProceed
+                                ? "A replacement preflight review passed."
+                                : "A replacement preflight review found blocking issues.",
+                reviewWindow.CopyFailure);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
