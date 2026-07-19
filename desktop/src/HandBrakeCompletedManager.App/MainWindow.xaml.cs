@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using HandBrakeCompletedManager.Core;
@@ -19,6 +21,7 @@ public partial class MainWindow : Window
     private readonly WindowsFileActionService _fileActions = new();
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly DispatcherTimer _historyRefreshTimer;
+    private readonly ICollectionView _historyView;
     private bool _isLoadingHistory;
 
     public MainWindow()
@@ -39,6 +42,9 @@ public partial class MainWindow : Window
         };
         _historyRefreshTimer.Tick += HistoryRefreshTimer_Tick;
         DataContext = this;
+        _historyView = CollectionViewSource.GetDefaultView(HistoryRows);
+        _historyView.Filter = MatchesHistoryFilter;
+        QuickFilterComboBox.SelectedIndex = 0;
         Loaded += MainWindow_Loaded;
         Closed += MainWindow_Closed;
     }
@@ -260,6 +266,73 @@ public partial class MainWindow : Window
         SelectedRecordText.Text = row is null
             ? "Select a completed encode"
             : $"Selected: {row.DestinationFilename}";
+        UpdateDetailsPanel(row);
+    }
+
+    private void HistorySearchTextBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        ApplyHistoryFilter();
+
+    private void QuickFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        ApplyHistoryFilter();
+
+    private void ClearHistoryFiltersButton_Click(object sender, RoutedEventArgs e)
+    {
+        HistorySearchTextBox.Clear();
+        QuickFilterComboBox.SelectedIndex = 0;
+        ApplyHistoryFilter();
+        HistorySearchTextBox.Focus();
+    }
+
+    private bool MatchesHistoryFilter(object item) =>
+        item is HistoryRow row && CompletedEncodeFilter.Matches(
+            row.Record,
+            HistorySearchTextBox.Text,
+            GetSelectedQuickFilter(),
+            DateTimeOffset.Now);
+
+    private CompletedEncodeQuickFilter GetSelectedQuickFilter()
+    {
+        var tag = (QuickFilterComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        return Enum.TryParse<CompletedEncodeQuickFilter>(tag, out var filter)
+            ? filter
+            : CompletedEncodeQuickFilter.All;
+    }
+
+    private void ApplyHistoryFilter()
+    {
+        if (_historyView is null)
+        {
+            return;
+        }
+
+        _historyView.Refresh();
+        ResultsCountText.Text = $"{_historyView.Cast<object>().Count():N0} shown";
+
+        if (HistoryGrid.SelectedItem is HistoryRow selectedRow && !_historyView.Contains(selectedRow))
+        {
+            HistoryGrid.SelectedItem = null;
+        }
+    }
+
+    private void UpdateDetailsPanel(HistoryRow? row)
+    {
+        if (row is null)
+        {
+            DetailsPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        DetailsCompletedText.Text = row.Completed;
+        DetailsStatusText.Text = row.Status;
+        DetailsSourcePathTextBox.Text = row.SourcePath;
+        DetailsDestinationPathTextBox.Text = row.DestinationPath;
+        DetailsMetricsText.Text =
+            $"Original {row.SourceSize}  |  Converted {row.DestinationSize}  |  " +
+            $"Output {row.OutputPercentage}  |  Saved {row.SpaceSaved}  |  " +
+            $"Exit code {row.Record.ExitCode}  |  " +
+            $"Source {(row.Record.SourceExists ? "available" : "missing")}, " +
+            $"output {(row.Record.DestinationExists ? "available" : "missing")}";
+        DetailsPanel.Visibility = Visibility.Visible;
     }
 
     private void HistoryGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -345,9 +418,13 @@ public partial class MainWindow : Window
                 HistoryRows.Add(HistoryRow.From(record));
             }
 
-            HistoryGrid.SelectedItem = selectedRecordId is null
+            ApplyHistoryFilter();
+            var selectedRow = selectedRecordId is null
                 ? null
                 : HistoryRows.FirstOrDefault(row => row.Id == selectedRecordId);
+            HistoryGrid.SelectedItem = selectedRow is not null && _historyView.Contains(selectedRow)
+                ? selectedRow
+                : null;
 
             CompletedCountText.Text = records.Count.ToString("N0");
             OriginalSizeText.Text = FormatBytes(records.Sum(item => item.SourceSize ?? 0));
@@ -383,9 +460,7 @@ public partial class MainWindow : Window
 }
 
 public sealed record HistoryRow(
-    Guid Id,
-    string SourcePath,
-    string DestinationPath,
+    CompletedEncode Record,
     string Completed,
     string Status,
     string SourceFilename,
@@ -395,10 +470,12 @@ public sealed record HistoryRow(
     string SpaceSaved,
     string DestinationFilename)
 {
+    public Guid Id => Record.Id;
+    public string SourcePath => Record.SourcePath;
+    public string DestinationPath => Record.DestinationPath;
+
     public static HistoryRow From(CompletedEncode item) => new(
-        item.Id,
-        item.SourcePath,
-        item.DestinationPath,
+        item,
         item.CompletedAtUtc.ToLocalTime().ToString("g"),
         item.CurrentStatus,
         item.SourceFilename,

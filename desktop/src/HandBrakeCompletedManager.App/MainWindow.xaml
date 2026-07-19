@@ -205,10 +205,57 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
+                        Padding="10"
+                        Background="White"
+                        BorderBrush="#DDE2E7"
+                        BorderThickness="0,0,0,1">
+                    <DockPanel>
+                        <TextBlock x:Name="ResultsCountText"
+                                   DockPanel.Dock="Right"
+                                   Margin="16,0,4,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="#596573"
+                                   Text="0 shown" />
+                        <WrapPanel>
+                            <TextBlock Margin="4,0,8,0"
+                                       VerticalAlignment="Center"
+                                       Text="Search" />
+                            <TextBox x:Name="HistorySearchTextBox"
+                                     Width="260"
+                                     Height="30"
+                                     Padding="7,4"
+                                     VerticalContentAlignment="Center"
+                                     TextChanged="HistorySearchTextBox_TextChanged" />
+                            <TextBlock Margin="16,0,8,0"
+                                       VerticalAlignment="Center"
+                                       Text="Quick filter" />
+                            <ComboBox x:Name="QuickFilterComboBox"
+                                      Width="180"
+                                      Height="30"
+                                      VerticalContentAlignment="Center"
+                                      SelectionChanged="QuickFilterComboBox_SelectionChanged">
+                                <ComboBoxItem Tag="All" Content="All records" />
+                                <ComboBoxItem Tag="Today" Content="Today" />
+                                <ComboBoxItem Tag="LastSevenDays" Content="Last 7 days" />
+                                <ComboBoxItem Tag="MissingFiles" Content="Missing files" />
+                                <ComboBoxItem Tag="OutputLargerThanSource" Content="Output larger than source" />
+                            </ComboBox>
+                            <Button Width="60"
+                                    Height="30"
+                                    Margin="8,0,0,0"
+                                    Click="ClearHistoryFiltersButton_Click"
+                                    Content="Clear" />
+                        </WrapPanel>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Row="1"
                         Padding="10"
                         Background="#F8FAFB">
                     <DockPanel>
@@ -264,7 +311,7 @@
                 </Border>
 
                 <DataGrid x:Name="HistoryGrid"
-                          Grid.Row="1"
+                          Grid.Row="2"
                           ItemsSource="{Binding HistoryRows}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
@@ -278,16 +325,70 @@
                           SelectionChanged="HistoryGrid_SelectionChanged"
                           MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Completed" Binding="{Binding Completed}" Width="155" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="145" />
-                        <DataGridTextColumn Header="Source" Binding="{Binding SourceFilename}" Width="*" MinWidth="180" />
-                        <DataGridTextColumn Header="Original size" Binding="{Binding SourceSize}" Width="120" />
-                        <DataGridTextColumn Header="Converted size" Binding="{Binding DestinationSize}" Width="125" />
-                        <DataGridTextColumn Header="Output size" Binding="{Binding OutputPercentage}" Width="105" />
-                        <DataGridTextColumn Header="Space saved" Binding="{Binding SpaceSaved}" Width="120" />
-                        <DataGridTextColumn Header="Converted file" Binding="{Binding DestinationFilename}" Width="*" MinWidth="180" />
+                        <DataGridTextColumn Header="Completed" Binding="{Binding Completed}" SortMemberPath="Record.CompletedAtUtc" Width="155" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" SortMemberPath="Record.CurrentStatus" Width="145" />
+                        <DataGridTextColumn Header="Source" Binding="{Binding SourceFilename}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="180" />
+                        <DataGridTextColumn Header="Original size" Binding="{Binding SourceSize}" SortMemberPath="Record.SourceSize" Width="120" />
+                        <DataGridTextColumn Header="Converted size" Binding="{Binding DestinationSize}" SortMemberPath="Record.DestinationSize" Width="125" />
+                        <DataGridTextColumn Header="Output size" Binding="{Binding OutputPercentage}" SortMemberPath="Record.OutputPercentage" Width="105" />
+                        <DataGridTextColumn Header="Space saved" Binding="{Binding SpaceSaved}" SortMemberPath="Record.SpaceSavedBytes" Width="120" />
+                        <DataGridTextColumn Header="Converted file" Binding="{Binding DestinationFilename}" SortMemberPath="Record.DestinationFilename" Width="*" MinWidth="180" />
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <Border x:Name="DetailsPanel"
+                        Grid.Row="3"
+                        Padding="12"
+                        Background="#F8FAFB"
+                        BorderBrush="#DDE2E7"
+                        BorderThickness="0,1,0,0"
+                        Visibility="Collapsed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="75" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Row="0"
+                                    Grid.ColumnSpan="2"
+                                    Margin="0,0,0,7"
+                                    Orientation="Horizontal">
+                            <TextBlock FontWeight="SemiBold" Text="Record details" />
+                            <TextBlock x:Name="DetailsCompletedText" Margin="16,0,0,0" Foreground="#596573" />
+                            <TextBlock x:Name="DetailsStatusText" Margin="16,0,0,0" Foreground="#596573" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="Source" />
+                        <TextBox x:Name="DetailsSourcePathTextBox"
+                                 Grid.Row="1"
+                                 Grid.Column="1"
+                                 Margin="0,0,0,5"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 IsReadOnly="True" />
+
+                        <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="Output" />
+                        <TextBox x:Name="DetailsDestinationPathTextBox"
+                                 Grid.Row="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,0,5"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 IsReadOnly="True" />
+
+                        <TextBlock Grid.Row="3" Text="Metrics" />
+                        <TextBlock x:Name="DetailsMetricsText"
+                                   Grid.Row="3"
+                                   Grid.Column="1"
+                                   Foreground="#596573" />
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
 

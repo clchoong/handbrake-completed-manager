@@ -1,6 +1,26 @@
-# History File Actions
+# Completed History Browsing
 
-The completed-history view provides non-destructive actions for the source and converted files associated with each record.
+The completed-history view provides search, filtering, sorting, record details, and non-destructive actions for the source and converted files associated with each record.
+
+## Search and quick filters
+
+Search accepts multiple terms and matches them case-insensitively across source and output filenames, full paths, extensions, and record status. Every entered term must match at least one field.
+
+Quick filters provide:
+
+- All records
+- Today, based on the current Windows time zone
+- Last 7 days
+- Records whose source or output was missing when captured
+- Records whose output is larger than the source
+
+The visible-result count updates whenever search text, a quick filter, or history data changes. Clear resets both search and the quick filter.
+
+## Sorting and details
+
+Select any column heading to sort the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
+
+Selecting a row displays its completion time, status, full source and output paths, size comparison, exit code, and captured file-availability state. The selected record remains selected during automatic history refresh when it still matches the active filter.
 
 ## Available actions
 
