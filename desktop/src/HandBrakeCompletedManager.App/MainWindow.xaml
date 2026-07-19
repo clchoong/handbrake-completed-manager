@@ -22,6 +22,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="HandBrake Completed Manager"
@@ -33,8 +34,16 @@
                            FontSize="14"
                            Foreground="#596573" />
             </StackPanel>
-            <Button x:Name="RefreshButton"
+            <Button x:Name="SettingsButton"
                     Grid.Column="1"
+                    Width="100"
+                    Height="36"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Click="SettingsButton_Click"
+                    Content="Settings" />
+            <Button x:Name="RefreshButton"
+                    Grid.Column="2"
                     Width="100"
                     Height="36"
                     VerticalAlignment="Center"

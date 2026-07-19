@@ -4,8 +4,8 @@ HandBrake Completed Manager remains available in the Windows notification area w
 
 ## Window lifecycle
 
-- Closing the main window hides it instead of terminating the application.
-- The first close-to-tray action displays a notification explaining how to reopen the window.
+- Closing the main window hides it instead of terminating the application when Close to Tray is enabled.
+- The first close-to-tray action displays guidance when notification-area guidance is enabled.
 - Double-clicking the tray icon restores and activates the main window.
 - Windows sign-out and shutdown bypass close-to-tray behavior so the operating system is not blocked.
 

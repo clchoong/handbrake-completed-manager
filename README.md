@@ -57,6 +57,8 @@ The current Phase 1 implementation provides:
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
+- Local settings control startup visibility, close-to-tray, tray guidance, and history refresh interval.
+- Non-fatal daily diagnostic logs cover desktop and receiver operational events.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -66,4 +68,5 @@ The current Phase 1 implementation provides:
 - [HandBrake connection](docs/handbrake-connection.md): detection, pipeline testing, and completion-action configuration
 - [Completed history browsing](docs/history-file-actions.md): search, quick filters, sorting, details, file actions, and missing-file behavior
 - [System tray behavior](docs/system-tray.md): close-to-tray lifecycle, status, commands, and Windows shutdown behavior
+- [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
 

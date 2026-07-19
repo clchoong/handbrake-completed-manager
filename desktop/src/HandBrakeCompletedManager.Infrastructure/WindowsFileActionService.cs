@@ -33,6 +33,36 @@ public sealed class WindowsFileActionService
         },
         fullPath => $"Selected {Path.GetFileName(fullPath)} in File Explorer.");
 
+    public FileActionResult OpenFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return new FileActionResult(false, "No folder path is available.");
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(folderPath);
+            if (!Directory.Exists(fullPath))
+            {
+                return new FileActionResult(false, $"The folder does not exist: {fullPath}");
+            }
+
+            _startProcess(new ProcessStartInfo
+            {
+                FileName = fullPath,
+                UseShellExecute = true
+            });
+            return new FileActionResult(true, $"Opened folder: {fullPath}");
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or NotSupportedException or PathTooLongException or
+                IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        {
+            return new FileActionResult(false, $"Unable to open the folder: {exception.Message}");
+        }
+    }
+
     private FileActionResult ExecuteForExistingFile(
         string filePath,
         Func<string, ProcessStartInfo> createStartInfo,

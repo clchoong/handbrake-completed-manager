@@ -93,4 +93,27 @@ public sealed class WindowsFileActionServiceTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public void OpenFolder_UsesWindowsShellForExistingDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "hbcm-folder-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        ProcessStartInfo? captured = null;
+        var service = new WindowsFileActionService(startInfo => captured = startInfo);
+
+        try
+        {
+            var result = service.OpenFolder(directory);
+
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(captured);
+            Assert.Equal(Path.GetFullPath(directory), captured.FileName);
+            Assert.True(captured.UseShellExecute);
+        }
+        finally
+        {
+            Directory.Delete(directory);
+        }
+    }
 }

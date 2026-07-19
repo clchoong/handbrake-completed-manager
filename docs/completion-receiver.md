@@ -51,3 +51,5 @@ dotnet .\desktop\src\HandBrakeCompletedManager.Receiver\bin\Release\net10.0-wind
 ## HandBrake configuration
 
 The desktop build places `HandBrakeCompletedManager.Receiver.exe` beside the main application. Expand **Configure completed-encode capture** in the application to copy its full path and the recommended HandBrake arguments. See [HandBrake detection and connection](handbrake-connection.md) for the complete setup procedure.
+
+Receiver outcomes are recorded in the shared daily [diagnostic logs](settings-and-logging.md). Logging failures never prevent completion-event processing.

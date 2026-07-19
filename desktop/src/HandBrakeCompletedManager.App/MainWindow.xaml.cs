@@ -20,12 +20,15 @@ public partial class MainWindow : Window
     private readonly HandBrakeConnectionTester _connectionTester = new();
     private readonly WindowsFileActionService _fileActions = new();
     private readonly HandBrakeConnectionStore _connectionStore;
+    private readonly ApplicationSettingsStore _settingsStore;
+    private readonly DiagnosticLogger _logger;
     private readonly DispatcherTimer _historyRefreshTimer;
     private readonly ICollectionView _historyView;
     private readonly TrayIconController _trayIconController;
     private bool _isLoadingHistory;
     private bool _allowClose;
     private bool _trayNotificationShown;
+    private ApplicationSettings _settings = ApplicationSettings.Default;
 
     public MainWindow()
     {
@@ -39,6 +42,8 @@ public partial class MainWindow : Window
             : "Receiver is missing - rebuild the desktop solution before setup";
         _repository = new CompletedEncodeRepository(_databasePath);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
+        _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
+        _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
         _historyRefreshTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(3)
@@ -59,9 +64,66 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        await LoadApplicationSettingsAsync();
+        ApplySettings();
+        if (_settings.StartMinimized)
+        {
+            Hide();
+        }
+
+        _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application started.");
         await LoadHistoryAsync();
         await FindHandBrakeAsync();
         _historyRefreshTimer.Start();
+    }
+
+    private async Task LoadApplicationSettingsAsync()
+    {
+        try
+        {
+            _settings = await _settingsStore.LoadAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _settings = ApplicationSettings.Default;
+            _ = _logger.LogAsync(
+                DiagnosticLogLevel.Warning,
+                "Application settings could not be loaded; defaults were applied.",
+                exception);
+        }
+    }
+
+    private void ApplySettings()
+    {
+        _settings = _settings.Normalize();
+        _historyRefreshTimer.Interval = TimeSpan.FromSeconds(_settings.HistoryRefreshSeconds);
+    }
+
+    private async void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var settingsWindow = new SettingsWindow(_settings, _fileActions, _logger.LogDirectory)
+        {
+            Owner = this
+        };
+
+        if (settingsWindow.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await _settingsStore.SaveAsync(settingsWindow.SavedSettings);
+            _settings = settingsWindow.SavedSettings;
+            ApplySettings();
+            StatusText.Text = "Settings saved.";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Application settings saved.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            StatusText.Text = $"Unable to save settings: {exception.Message}";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Error, "Application settings could not be saved.", exception);
+        }
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
@@ -78,6 +140,7 @@ public partial class MainWindow : Window
     {
         _historyRefreshTimer.Stop();
         _trayIconController.Dispose();
+        System.Windows.Application.Current.Shutdown();
     }
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
@@ -87,11 +150,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!_settings.CloseToTray)
+        {
+            _allowClose = true;
+            _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application closed from the main window.");
+            return;
+        }
+
         e.Cancel = true;
         Hide();
         StatusText.Text = "Running in the notification area.";
+        _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Main window hidden in the notification area.");
 
-        if (!_trayNotificationShown)
+        if (_settings.NotificationsEnabled && !_trayNotificationShown)
         {
             _trayNotificationShown = true;
             _trayIconController.ShowMovedToTrayNotification();
@@ -123,8 +194,10 @@ public partial class MainWindow : Window
     private void ExitFromTray()
     {
         _allowClose = true;
+        _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application exited from the tray menu.")
+            .GetAwaiter()
+            .GetResult();
         Close();
-        System.Windows.Application.Current.Shutdown();
     }
 
     private async void FindHandBrakeButton_Click(object sender, RoutedEventArgs e)
@@ -176,6 +249,9 @@ public partial class MainWindow : Window
 
             ConnectionStatusText.Text = result.IsSuccess ? "Pipeline test passed" : "Pipeline test failed";
             StatusText.Text = result.Message;
+            _ = _logger.LogAsync(
+                result.IsSuccess ? DiagnosticLogLevel.Information : DiagnosticLogLevel.Warning,
+                result.IsSuccess ? "HandBrake pipeline test passed." : "HandBrake pipeline test failed.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -240,6 +316,7 @@ public partial class MainWindow : Window
         {
             ConnectionStatusText.Text = "Detection failed";
             StatusText.Text = $"Unable to read connection settings: {exception.Message}";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Error, "HandBrake detection failed.", exception);
         }
         finally
         {
@@ -461,10 +538,12 @@ public partial class MainWindow : Window
             ApplyHistoryFilter();
             UpdateSummary(HistoryRows.Select(item => item.Record));
             StatusText.Text = "History record removed. Source and output files were not changed.";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Information, "A completed-history record was removed.");
         }
         catch (Exception exception)
         {
             StatusText.Text = $"Unable to remove the history record: {exception.Message}";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Error, "A completed-history record could not be removed.", exception);
         }
         finally
         {
@@ -538,6 +617,7 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             StatusText.Text = $"Unable to load history: {exception.Message}";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Error, "Completed history could not be loaded.", exception);
         }
         finally
         {
