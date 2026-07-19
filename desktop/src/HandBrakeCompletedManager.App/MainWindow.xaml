@@ -303,8 +303,18 @@
                         <Button x:Name="CopySourcePathButton"
                                 MinWidth="105"
                                 Height="30"
+                                Margin="0,0,6,0"
                                 Click="CopySourcePathButton_Click"
                                 Content="Copy source path"
+                                IsEnabled="False" />
+                        <Button x:Name="RemoveHistoryButton"
+                                MinWidth="125"
+                                Height="30"
+                                Background="#FFF4F4"
+                                BorderBrush="#E6A7A7"
+                                Foreground="#9F1D1D"
+                                Click="RemoveHistoryButton_Click"
+                                Content="Remove from history"
                                 IsEnabled="False" />
                         </WrapPanel>
                     </DockPanel>

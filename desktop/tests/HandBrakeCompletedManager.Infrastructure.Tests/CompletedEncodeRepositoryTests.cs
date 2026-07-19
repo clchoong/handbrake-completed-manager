@@ -61,4 +61,68 @@ public sealed class CompletedEncodeRepositoryTests
             }
         }
     }
+
+    [Fact]
+    public async Task RemoveFromHistoryAsync_RemovesOnlyRecordAndLeavesFilesUntouched()
+    {
+        var testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "handbrake-completed-manager-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(testDirectory);
+        var sourcePath = Path.Combine(testDirectory, "Source.mkv");
+        var destinationPath = Path.Combine(testDirectory, "Output.mp4");
+        await File.WriteAllTextAsync(sourcePath, "source-content");
+        await File.WriteAllTextAsync(destinationPath, "output-content");
+        var repository = new CompletedEncodeRepository(Path.Combine(testDirectory, "history.db"));
+        var completedAt = new DateTimeOffset(2026, 7, 20, 1, 2, 3, TimeSpan.Zero);
+        var record = new CompletedEncode(
+            Guid.NewGuid(),
+            "REMOVE-FINGERPRINT",
+            completedAt,
+            sourcePath,
+            Path.GetFileName(sourcePath),
+            Path.GetExtension(sourcePath),
+            new FileInfo(sourcePath).Length,
+            true,
+            destinationPath,
+            Path.GetFileName(destinationPath),
+            Path.GetExtension(destinationPath),
+            new FileInfo(destinationPath).Length,
+            true,
+            completedAt,
+            50,
+            50,
+            7,
+            0,
+            "Completed",
+            completedAt,
+            completedAt);
+
+        try
+        {
+            await repository.InitializeAsync();
+            Assert.True(await repository.AddAsync(record));
+
+            var removed = await repository.RemoveFromHistoryAsync(record.Id);
+            var removedAgain = await repository.RemoveFromHistoryAsync(record.Id);
+            var records = await repository.GetAllAsync();
+
+            Assert.True(removed);
+            Assert.False(removedAgain);
+            Assert.Empty(records);
+            Assert.True(File.Exists(sourcePath));
+            Assert.True(File.Exists(destinationPath));
+            Assert.Equal("source-content", await File.ReadAllTextAsync(sourcePath));
+            Assert.Equal("output-content", await File.ReadAllTextAsync(destinationPath));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+    }
 }

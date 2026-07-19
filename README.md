@@ -55,6 +55,7 @@ The current Phase 1 implementation provides:
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
 - Selected history records support source/output playback, Explorer reveal, and path copying; double-click opens the output.
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
+- Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation

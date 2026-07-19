@@ -263,6 +263,7 @@ public partial class MainWindow : Window
         RevealSourceButton.IsEnabled = hasSelection;
         CopyDestinationPathButton.IsEnabled = hasSelection;
         CopySourcePathButton.IsEnabled = hasSelection;
+        RemoveHistoryButton.IsEnabled = hasSelection;
         SelectedRecordText.Text = row is null
             ? "Select a completed encode"
             : $"Selected: {row.DestinationFilename}";
@@ -366,6 +367,58 @@ public partial class MainWindow : Window
     private void CopySourcePathButton_Click(object sender, RoutedEventArgs e) =>
         CopySelectedPath(row => row.SourcePath, "Source-file path copied.");
 
+    private async void RemoveHistoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this,
+            $"Remove this record from completed history?\n\n" +
+            $"Source: {row.SourceFilename}\n" +
+            $"Output: {row.DestinationFilename}\n\n" +
+            "The source and output files will not be deleted or changed.",
+            "Remove from history",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            StatusText.Text = "History removal cancelled. No files or records were changed.";
+            return;
+        }
+
+        try
+        {
+            RemoveHistoryButton.IsEnabled = false;
+            StatusText.Text = "Removing history record...";
+            var removed = await _repository.RemoveFromHistoryAsync(row.Id);
+
+            if (!removed)
+            {
+                StatusText.Text = "The history record no longer exists. No files were changed.";
+                return;
+            }
+
+            HistoryRows.Remove(row);
+            ApplyHistoryFilter();
+            UpdateSummary(HistoryRows.Select(item => item.Record));
+            StatusText.Text = "History record removed. Source and output files were not changed.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"Unable to remove the history record: {exception.Message}";
+        }
+        finally
+        {
+            RemoveHistoryButton.IsEnabled = HistoryGrid.SelectedItem is HistoryRow;
+        }
+    }
+
     private void RunSelectedFileAction(
         Func<string, FileActionResult> action,
         Func<HistoryRow, string> selectPath)
@@ -426,10 +479,7 @@ public partial class MainWindow : Window
                 ? selectedRow
                 : null;
 
-            CompletedCountText.Text = records.Count.ToString("N0");
-            OriginalSizeText.Text = FormatBytes(records.Sum(item => item.SourceSize ?? 0));
-            ConvertedSizeText.Text = FormatBytes(records.Sum(item => item.DestinationSize ?? 0));
-            SpaceSavedText.Text = FormatBytes(records.Sum(item => item.SpaceSavedBytes ?? 0));
+            UpdateSummary(records);
             StatusText.Text = $"{records.Count:N0} record(s) - {_databasePath}";
         }
         catch (Exception exception)
@@ -441,6 +491,15 @@ public partial class MainWindow : Window
             _isLoadingHistory = false;
             RefreshButton.IsEnabled = true;
         }
+    }
+
+    private void UpdateSummary(IEnumerable<CompletedEncode> records)
+    {
+        var recordList = records as IReadOnlyCollection<CompletedEncode> ?? records.ToArray();
+        CompletedCountText.Text = recordList.Count.ToString("N0");
+        OriginalSizeText.Text = FormatBytes(recordList.Sum(item => item.SourceSize ?? 0));
+        ConvertedSizeText.Text = FormatBytes(recordList.Sum(item => item.DestinationSize ?? 0));
+        SpaceSavedText.Text = FormatBytes(recordList.Sum(item => item.SpaceSavedBytes ?? 0));
     }
 
     private static string FormatBytes(long bytes)

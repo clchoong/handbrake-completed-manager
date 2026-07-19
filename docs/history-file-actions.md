@@ -37,3 +37,9 @@ Double-clicking a history row opens the converted file with its Windows default 
 Playback and Explorer actions verify that the file currently exists. If it has been moved or deleted, the application reports the missing path without launching another process. Copy Path remains available because a stored path can still be useful for investigation.
 
 These actions never modify, move, replace, or delete either file. File deletion and Remove from History remain separate workflows.
+
+## Remove from history
+
+**Remove from history** deletes only the selected SQLite history record. A warning confirmation identifies the source and output filenames and states that neither file will be deleted or changed. Cancelling the confirmation leaves the record and both files untouched.
+
+After a confirmed removal, the history table, active filter results, summary totals, and details selection update immediately. This action cannot be used to delete source or output files.

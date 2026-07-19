@@ -51,6 +51,17 @@ public sealed class CompletedEncodeRepository(string databasePath)
         return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
+    public async Task<bool> RemoveFromHistoryAsync(
+        Guid recordId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM completed_encodes WHERE id = $id;";
+        command.Parameters.AddWithValue("$id", recordId.ToString("D"));
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
     public async Task<IReadOnlyList<CompletedEncode>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
