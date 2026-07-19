@@ -16,21 +16,24 @@ public sealed class ReplacementPreflightService
             destination.Exists,
             destination.Size,
             PathExists(paths.FinalPath),
-            PathExists(paths.TemporaryPath));
+            PathExists(paths.TemporaryPath),
+            destination.LastWriteUtc);
         return ReplacementPlanner.Create(completedEncode, snapshot);
     }
 
-    private static (bool Exists, long? Size) ReadFile(string path)
+    private static (bool Exists, long? Size, DateTimeOffset? LastWriteUtc) ReadFile(string path)
     {
         try
         {
             var file = new FileInfo(path);
-            return file.Exists ? (true, file.Length) : (false, null);
+            return file.Exists
+                ? (true, file.Length, file.LastWriteTimeUtc)
+                : (false, null, null);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
-            return (File.Exists(path), null);
+            return (File.Exists(path), null, null);
         }
     }
 

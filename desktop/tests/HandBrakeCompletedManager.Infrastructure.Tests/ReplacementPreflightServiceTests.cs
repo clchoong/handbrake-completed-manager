@@ -23,7 +23,10 @@ public sealed class ReplacementPreflightServiceTests
         {
             var plan = new ReplacementPreflightService().Review(record);
 
-            Assert.True(plan.CanProceed);
+            Assert.True(
+                plan.CanProceed,
+                $"record={record.DestinationLastWriteUtc:O}; snapshot={plan.Snapshot.DestinationLastWriteUtc:O}; " +
+                string.Join("; ", plan.Issues.Select(issue => $"{issue.Code}: {issue.Message}")));
             Assert.True(File.Exists(sourcePath));
             Assert.True(File.Exists(destinationPath));
             Assert.False(File.Exists(plan.Paths.FinalPath));
@@ -89,7 +92,7 @@ public sealed class ReplacementPreflightServiceTests
             Path.GetExtension(destinationPath),
             destinationSize,
             true,
-            timestamp,
+            new FileInfo(destinationPath).LastWriteTimeUtc,
             destinationSize * 100d / sourceSize,
             100d - (destinationSize * 100d / sourceSize),
             sourceSize - destinationSize,

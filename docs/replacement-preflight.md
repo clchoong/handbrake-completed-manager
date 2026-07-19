@@ -26,6 +26,7 @@ A future replacement cannot start when:
 - A previous temporary-copy path already exists.
 - The current source size differs from the size recorded at encode completion.
 - The current converted size differs from the size recorded at encode completion.
+- The converted file modification time differs from the time recorded at encode completion.
 
 A converted file larger than the source produces a warning rather than silently appearing safe.
 
@@ -45,17 +46,21 @@ Defined stages cover preparing, copying, verifying, backing up the source, final
 
 SQLite constraints reject unknown state values, invalid file sizes, negative or oversized byte progress, and more than one active operation for the same completed encode.
 
+## Temporary-copy foundation
+
+The backend can now create a new `.hbcm-copying` file by streaming the converted output, persisting progress, and verifying the completed copy with its size and SHA-256 digest. It re-runs preflight immediately before copying and confirms that the converted file remains unchanged while it is read.
+
+This capability is not exposed in the interface. Cancellation and failures leave the temporary file and durable operation state available for later recovery decisions; they do not automatically delete evidence of an interrupted operation. See [Verified temporary copy](temporary-copy-engine.md).
+
 ## Still disabled
 
 Passing preflight does not enable source replacement. The following must be implemented and tested before any destructive transition is available:
 
-1. Streamed temporary copy with progress and cancellation.
-2. Free-space and stable-file checks.
-3. Copy verification.
-4. Original backup with conflict-safe naming.
-5. Atomic finalisation.
-6. Restart recovery, retry, and cleanup decisions.
-7. Undo and restore-original behavior.
-8. Explicit final user confirmation.
+1. User-facing execution, progress, and cancellation controls.
+2. Original backup with conflict-safe naming.
+3. Atomic finalisation.
+4. Restart recovery, retry, and cleanup decisions.
+5. Undo and restore-original behavior.
+6. Explicit final user confirmation.
 
 The mandatory rule remains: never remove or archive the source until the converted file has been copied to the source location and verified.

@@ -96,6 +96,46 @@ public sealed class ReplacementOperationRepository(string databasePath)
         return operations;
     }
 
+    public async Task<ReplacementOperation?> GetByIdAsync(
+        Guid operationId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, completed_encode_id, status, stage,
+                   source_path, destination_path, final_path, temporary_path, backup_path,
+                   source_size, destination_size, bytes_copied, verification_status,
+                   failure_message, date_created_utc, date_updated_utc
+            FROM replacement_operations
+            WHERE id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", operationId.ToString("D"));
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? ReadOperation(reader) : null;
+    }
+
+    public async Task<ReplacementOperation?> GetLatestForCompletedEncodeAsync(
+        Guid completedEncodeId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, completed_encode_id, status, stage,
+                   source_path, destination_path, final_path, temporary_path, backup_path,
+                   source_size, destination_size, bytes_copied, verification_status,
+                   failure_message, date_created_utc, date_updated_utc
+            FROM replacement_operations
+            WHERE completed_encode_id = $completedEncodeId
+            ORDER BY date_updated_utc DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$completedEncodeId", completedEncodeId.ToString("D"));
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? ReadOperation(reader) : null;
+    }
+
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connectionString = new SqliteConnectionStringBuilder

@@ -87,6 +87,27 @@ public sealed class ReplacementPlannerTests
         Assert.Contains(plan.Issues, issue => issue.Code == "SameExtension");
     }
 
+    [Fact]
+    public void Create_BlocksChangedDestinationTimestamp()
+    {
+        var record = CreateRecord();
+        var changedTimestamp = record.DestinationLastWriteUtc!.Value.AddSeconds(1);
+
+        var plan = ReplacementPlanner.Create(
+            record,
+            new ReplacementPreflightSnapshot(
+                true,
+                1_000,
+                true,
+                400,
+                false,
+                false,
+                changedTimestamp));
+
+        Assert.False(plan.CanProceed);
+        Assert.Contains(plan.Issues, issue => issue.Code == "DestinationTimestampChanged");
+    }
+
     private static CompletedEncode CreateRecord()
     {
         var timestamp = new DateTimeOffset(2026, 7, 20, 1, 2, 3, TimeSpan.Zero);

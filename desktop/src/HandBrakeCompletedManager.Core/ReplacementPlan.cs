@@ -22,7 +22,8 @@ public sealed record ReplacementPreflightSnapshot(
     bool DestinationExists,
     long? DestinationSize,
     bool FinalPathExists,
-    bool TemporaryPathExists);
+    bool TemporaryPathExists,
+    DateTimeOffset? DestinationLastWriteUtc = null);
 
 public sealed record ReplacementPlan(
     CompletedEncode CompletedEncode,
@@ -110,6 +111,15 @@ public static class ReplacementPlanner
             snapshot.DestinationSize != completedEncode.DestinationSize,
             "DestinationChanged",
             "The converted size changed after the encode was recorded.",
+            issues);
+        AddBlockingWhen(
+            snapshot.DestinationExists &&
+            completedEncode.DestinationLastWriteUtc is not null &&
+            snapshot.DestinationLastWriteUtc is not null &&
+            snapshot.DestinationLastWriteUtc.Value.ToUniversalTime() !=
+            completedEncode.DestinationLastWriteUtc.Value.ToUniversalTime(),
+            "DestinationTimestampChanged",
+            "The converted file modification time changed after the encode was recorded.",
             issues);
 
         if (snapshot.SourceSize > 0 && snapshot.DestinationSize > snapshot.SourceSize)
