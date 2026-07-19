@@ -22,7 +22,10 @@ public partial class MainWindow : Window
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly DispatcherTimer _historyRefreshTimer;
     private readonly ICollectionView _historyView;
+    private readonly TrayIconController _trayIconController;
     private bool _isLoadingHistory;
+    private bool _allowClose;
+    private bool _trayNotificationShown;
 
     public MainWindow()
     {
@@ -45,7 +48,9 @@ public partial class MainWindow : Window
         _historyView = CollectionViewSource.GetDefaultView(HistoryRows);
         _historyView.Filter = MatchesHistoryFilter;
         QuickFilterComboBox.SelectedIndex = 0;
+        _trayIconController = new TrayIconController(OpenFromTray, RefreshFromTray, ExitFromTray);
         Loaded += MainWindow_Loaded;
+        Closing += MainWindow_Closing;
         Closed += MainWindow_Closed;
     }
 
@@ -72,6 +77,54 @@ public partial class MainWindow : Window
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         _historyRefreshTimer.Stop();
+        _trayIconController.Dispose();
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        Hide();
+        StatusText.Text = "Running in the notification area.";
+
+        if (!_trayNotificationShown)
+        {
+            _trayNotificationShown = true;
+            _trayIconController.ShowMovedToTrayNotification();
+        }
+    }
+
+    internal void PrepareForShutdown()
+    {
+        _allowClose = true;
+    }
+
+    private void OpenFromTray()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    private void RefreshFromTray()
+    {
+        OpenFromTray();
+        _ = LoadHistoryAsync();
+    }
+
+    private void ExitFromTray()
+    {
+        _allowClose = true;
+        Close();
+        System.Windows.Application.Current.Shutdown();
     }
 
     private async void FindHandBrakeButton_Click(object sender, RoutedEventArgs e)
@@ -81,7 +134,7 @@ public partial class MainWindow : Window
 
     private async void BrowseHandBrakeButton_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Select HandBrake.exe",
             Filter = "HandBrake executable (HandBrake.exe)|HandBrake.exe|Executable files (*.exe)|*.exe",
@@ -243,7 +296,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            Clipboard.SetText(value);
+            System.Windows.Clipboard.SetText(value);
             StatusText.Text = successMessage;
         }
         catch (Exception exception) when (exception is System.Runtime.InteropServices.ExternalException)
@@ -375,7 +428,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var confirmation = MessageBox.Show(
+        var confirmation = System.Windows.MessageBox.Show(
             this,
             $"Remove this record from completed history?\n\n" +
             $"Source: {row.SourceFilename}\n" +
@@ -500,6 +553,7 @@ public partial class MainWindow : Window
         OriginalSizeText.Text = FormatBytes(recordList.Sum(item => item.SourceSize ?? 0));
         ConvertedSizeText.Text = FormatBytes(recordList.Sum(item => item.DestinationSize ?? 0));
         SpaceSavedText.Text = FormatBytes(recordList.Sum(item => item.SpaceSavedBytes ?? 0));
+        _trayIconController.UpdateRecordCount(recordList.Count);
     }
 
     private static string FormatBytes(long bytes)
