@@ -7,6 +7,53 @@ namespace HandBrakeCompletedManager.Infrastructure.Tests;
 public sealed class CompletedEncodeRepositoryTests
 {
     [Fact]
+    public async Task InitializeAsync_UpgradesInitialDatabaseWithReplacementOperations()
+    {
+        var testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "handbrake-completed-manager-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(testDirectory);
+        var databasePath = Path.Combine(testDirectory, "history.db");
+
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={databasePath}"))
+            {
+                await connection.OpenAsync();
+                var assembly = typeof(CompletedEncodeRepository).Assembly;
+                await using var stream = assembly.GetManifestResourceStream(
+                    "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql")
+                    ?? throw new InvalidOperationException("Initial migration resource is missing.");
+                using var migrationReader = new StreamReader(stream);
+                await using var migrationCommand = connection.CreateCommand();
+                migrationCommand.CommandText = await migrationReader.ReadToEndAsync();
+                await migrationCommand.ExecuteNonQueryAsync();
+            }
+
+            await new CompletedEncodeRepository(databasePath).InitializeAsync();
+
+            await using var verificationConnection = new SqliteConnection($"Data Source={databasePath}");
+            await verificationConnection.OpenAsync();
+            await using var verificationCommand = verificationConnection.CreateCommand();
+            verificationCommand.CommandText = """
+                SELECT COUNT(*)
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'replacement_operations';
+                """;
+            Assert.Equal(1L, await verificationCommand.ExecuteScalarAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task AddAsync_PreventsDuplicateFingerprintAndPersistsRecord()
     {
         var testDirectory = Path.Combine(

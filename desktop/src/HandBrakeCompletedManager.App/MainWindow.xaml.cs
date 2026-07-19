@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly HandBrakeDetector _handBrakeDetector = new();
     private readonly HandBrakeConnectionTester _connectionTester = new();
     private readonly WindowsFileActionService _fileActions = new();
+    private readonly ReplacementPreflightService _replacementPreflightService = new();
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -393,6 +394,7 @@ public partial class MainWindow : Window
         RevealSourceButton.IsEnabled = hasSelection;
         CopyDestinationPathButton.IsEnabled = hasSelection;
         CopySourcePathButton.IsEnabled = hasSelection;
+        ReviewReplacementButton.IsEnabled = hasSelection;
         RemoveHistoryButton.IsEnabled = hasSelection;
         SelectedRecordText.Text = row is null
             ? "Select a completed encode"
@@ -496,6 +498,39 @@ public partial class MainWindow : Window
 
     private void CopySourcePathButton_Click(object sender, RoutedEventArgs e) =>
         CopySelectedPath(row => row.SourcePath, "Source-file path copied.");
+
+    private void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        try
+        {
+            var plan = _replacementPreflightService.Review(row.Record);
+            var reviewWindow = new ReplacementReviewWindow(plan) { Owner = this };
+            reviewWindow.ShowDialog();
+            StatusText.Text = plan.CanProceed
+                ? "Replacement preflight passed. No files were changed."
+                : "Replacement preflight found blocking issues. No files were changed.";
+            _ = _logger.LogAsync(
+                plan.CanProceed ? DiagnosticLogLevel.Information : DiagnosticLogLevel.Warning,
+                plan.CanProceed
+                    ? "A replacement preflight review passed."
+                    : "A replacement preflight review found blocking issues.");
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            StatusText.Text = $"Unable to review replacement safety: {exception.Message}";
+            _ = _logger.LogAsync(
+                DiagnosticLogLevel.Error,
+                "A replacement preflight review could not be completed.",
+                exception);
+        }
+    }
 
     private async void RemoveHistoryButton_Click(object sender, RoutedEventArgs e)
     {

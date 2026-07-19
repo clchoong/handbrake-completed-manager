@@ -19,6 +19,9 @@
     <EmbeddedResource Include="..\..\..\database\migrations\001_initial.sql"
                       Link="Migrations\001_initial.sql"
                       LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql" />
+    <EmbeddedResource Include="..\..\..\database\migrations\002_replacement_operations.sql"
+                      Link="Migrations\002_replacement_operations.sql"
+                      LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql" />
   </ItemGroup>
 
 </Project>

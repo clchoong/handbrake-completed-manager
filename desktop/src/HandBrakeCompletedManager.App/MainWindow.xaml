@@ -316,6 +316,15 @@
                                 Click="CopySourcePathButton_Click"
                                 Content="Copy source path"
                                 IsEnabled="False" />
+                        <Button x:Name="ReviewReplacementButton"
+                                MinWidth="135"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Background="#FFF7DF"
+                                BorderBrush="#E8C56D"
+                                Click="ReviewReplacementButton_Click"
+                                Content="Review replacement"
+                                IsEnabled="False" />
                         <Button x:Name="RemoveHistoryButton"
                                 MinWidth="125"
                                 Height="30"

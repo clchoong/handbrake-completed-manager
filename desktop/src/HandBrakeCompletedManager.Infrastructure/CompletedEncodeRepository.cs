@@ -6,8 +6,11 @@ namespace HandBrakeCompletedManager.Infrastructure;
 
 public sealed class CompletedEncodeRepository(string databasePath)
 {
-    private const string MigrationResourceName =
-        "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql";
+    private static readonly string[] MigrationResourceNames =
+    [
+        "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql",
+        "HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql"
+    ];
 
     private readonly string _databasePath = Path.GetFullPath(databasePath);
 
@@ -18,9 +21,12 @@ public sealed class CompletedEncodeRepository(string databasePath)
         Directory.CreateDirectory(directory);
 
         await using var connection = await OpenConnectionAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = ReadMigration();
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        foreach (var migrationResourceName in MigrationResourceNames)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = ReadMigration(migrationResourceName);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 
     public async Task<bool> AddAsync(
@@ -157,11 +163,11 @@ public sealed class CompletedEncodeRepository(string databasePath)
         ParseDate(reader.GetString(19)),
         ParseDate(reader.GetString(20)));
 
-    private static string ReadMigration()
+    private static string ReadMigration(string migrationResourceName)
     {
         var assembly = typeof(CompletedEncodeRepository).Assembly;
-        using var stream = assembly.GetManifestResourceStream(MigrationResourceName)
-            ?? throw new InvalidOperationException($"Missing embedded migration: {MigrationResourceName}");
+        using var stream = assembly.GetManifestResourceStream(migrationResourceName)
+            ?? throw new InvalidOperationException($"Missing embedded migration: {migrationResourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
