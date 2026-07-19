@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using HandBrakeCompletedManager.Core;
 using HandBrakeCompletedManager.Infrastructure;
@@ -15,6 +16,7 @@ public partial class MainWindow : Window
     private readonly CompletedEncodeRepository _repository;
     private readonly HandBrakeDetector _handBrakeDetector = new();
     private readonly HandBrakeConnectionTester _connectionTester = new();
+    private readonly WindowsFileActionService _fileActions = new();
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly DispatcherTimer _historyRefreshTimer;
     private bool _isLoadingHistory;
@@ -244,6 +246,83 @@ public partial class MainWindow : Window
         }
     }
 
+    private void HistoryGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var row = HistoryGrid.SelectedItem as HistoryRow;
+        var hasSelection = row is not null;
+
+        PlayDestinationButton.IsEnabled = hasSelection;
+        PlaySourceButton.IsEnabled = hasSelection;
+        RevealDestinationButton.IsEnabled = hasSelection;
+        RevealSourceButton.IsEnabled = hasSelection;
+        CopyDestinationPathButton.IsEnabled = hasSelection;
+        CopySourcePathButton.IsEnabled = hasSelection;
+        SelectedRecordText.Text = row is null
+            ? "Select a completed encode"
+            : $"Selected: {row.DestinationFilename}";
+    }
+
+    private void HistoryGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source ||
+            ItemsControl.ContainerFromElement(HistoryGrid, source) is not DataGridRow row ||
+            row.Item is not HistoryRow historyRow)
+        {
+            return;
+        }
+
+        RunFileAction(_fileActions.Play, historyRow.DestinationPath);
+        e.Handled = true;
+    }
+
+    private void PlayDestinationButton_Click(object sender, RoutedEventArgs e) =>
+        RunSelectedFileAction(_fileActions.Play, row => row.DestinationPath);
+
+    private void PlaySourceButton_Click(object sender, RoutedEventArgs e) =>
+        RunSelectedFileAction(_fileActions.Play, row => row.SourcePath);
+
+    private void RevealDestinationButton_Click(object sender, RoutedEventArgs e) =>
+        RunSelectedFileAction(_fileActions.Reveal, row => row.DestinationPath);
+
+    private void RevealSourceButton_Click(object sender, RoutedEventArgs e) =>
+        RunSelectedFileAction(_fileActions.Reveal, row => row.SourcePath);
+
+    private void CopyDestinationPathButton_Click(object sender, RoutedEventArgs e) =>
+        CopySelectedPath(row => row.DestinationPath, "Converted-file path copied.");
+
+    private void CopySourcePathButton_Click(object sender, RoutedEventArgs e) =>
+        CopySelectedPath(row => row.SourcePath, "Source-file path copied.");
+
+    private void RunSelectedFileAction(
+        Func<string, FileActionResult> action,
+        Func<HistoryRow, string> selectPath)
+    {
+        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        RunFileAction(action, selectPath(row));
+    }
+
+    private void RunFileAction(Func<string, FileActionResult> action, string path)
+    {
+        var result = action(path);
+        StatusText.Text = result.Message;
+    }
+
+    private void CopySelectedPath(Func<HistoryRow, string> selectPath, string successMessage)
+    {
+        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        CopySetupValue(selectPath(row), successMessage);
+    }
+
     private async Task LoadHistoryAsync()
     {
         if (_isLoadingHistory)
@@ -258,12 +337,17 @@ public partial class MainWindow : Window
             StatusText.Text = "Loading completed history...";
             await _repository.InitializeAsync();
             var records = await _repository.GetAllAsync();
+            var selectedRecordId = (HistoryGrid.SelectedItem as HistoryRow)?.Id;
 
             HistoryRows.Clear();
             foreach (var record in records)
             {
                 HistoryRows.Add(HistoryRow.From(record));
             }
+
+            HistoryGrid.SelectedItem = selectedRecordId is null
+                ? null
+                : HistoryRows.FirstOrDefault(row => row.Id == selectedRecordId);
 
             CompletedCountText.Text = records.Count.ToString("N0");
             OriginalSizeText.Text = FormatBytes(records.Sum(item => item.SourceSize ?? 0));
@@ -299,6 +383,9 @@ public partial class MainWindow : Window
 }
 
 public sealed record HistoryRow(
+    Guid Id,
+    string SourcePath,
+    string DestinationPath,
     string Completed,
     string Status,
     string SourceFilename,
@@ -309,6 +396,9 @@ public sealed record HistoryRow(
     string DestinationFilename)
 {
     public static HistoryRow From(CompletedEncode item) => new(
+        item.Id,
+        item.SourcePath,
+        item.DestinationPath,
         item.CompletedAtUtc.ToLocalTime().ToString("g"),
         item.CurrentStatus,
         item.SourceFilename,

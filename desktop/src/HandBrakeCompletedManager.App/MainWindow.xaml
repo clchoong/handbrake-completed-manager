@@ -202,27 +202,93 @@
                 BorderBrush="#DDE2E7"
                 BorderThickness="1"
                 CornerRadius="8">
-            <DataGrid x:Name="HistoryGrid"
-                      ItemsSource="{Binding HistoryRows}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      GridLinesVisibility="Horizontal"
-                      HeadersVisibility="Column"
-                      BorderThickness="0"
-                      RowHeaderWidth="0"
-                      AlternatingRowBackground="#F8FAFB">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Completed" Binding="{Binding Completed}" Width="155" />
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="145" />
-                    <DataGridTextColumn Header="Source" Binding="{Binding SourceFilename}" Width="*" MinWidth="180" />
-                    <DataGridTextColumn Header="Original size" Binding="{Binding SourceSize}" Width="120" />
-                    <DataGridTextColumn Header="Converted size" Binding="{Binding DestinationSize}" Width="125" />
-                    <DataGridTextColumn Header="Output size" Binding="{Binding OutputPercentage}" Width="105" />
-                    <DataGridTextColumn Header="Space saved" Binding="{Binding SpaceSaved}" Width="120" />
-                    <DataGridTextColumn Header="Converted file" Binding="{Binding DestinationFilename}" Width="*" MinWidth="180" />
-                </DataGrid.Columns>
-            </DataGrid>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Padding="10"
+                        Background="#F8FAFB">
+                    <DockPanel>
+                        <TextBlock x:Name="SelectedRecordText"
+                                   Margin="4,0,16,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="#596573"
+                                   Text="Select a completed encode" />
+                        <WrapPanel HorizontalAlignment="Right">
+                        <Button x:Name="PlayDestinationButton"
+                                MinWidth="90"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Click="PlayDestinationButton_Click"
+                                Content="Play output"
+                                IsEnabled="False" />
+                        <Button x:Name="PlaySourceButton"
+                                MinWidth="90"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Click="PlaySourceButton_Click"
+                                Content="Play source"
+                                IsEnabled="False" />
+                        <Button x:Name="RevealDestinationButton"
+                                MinWidth="95"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Click="RevealDestinationButton_Click"
+                                Content="Show output"
+                                IsEnabled="False" />
+                        <Button x:Name="RevealSourceButton"
+                                MinWidth="95"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Click="RevealSourceButton_Click"
+                                Content="Show source"
+                                IsEnabled="False" />
+                        <Button x:Name="CopyDestinationPathButton"
+                                MinWidth="105"
+                                Height="30"
+                                Margin="0,0,6,0"
+                                Click="CopyDestinationPathButton_Click"
+                                Content="Copy output path"
+                                IsEnabled="False" />
+                        <Button x:Name="CopySourcePathButton"
+                                MinWidth="105"
+                                Height="30"
+                                Click="CopySourcePathButton_Click"
+                                Content="Copy source path"
+                                IsEnabled="False" />
+                        </WrapPanel>
+                    </DockPanel>
+                </Border>
+
+                <DataGrid x:Name="HistoryGrid"
+                          Grid.Row="1"
+                          ItemsSource="{Binding HistoryRows}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          BorderThickness="0"
+                          RowHeaderWidth="0"
+                          SelectionMode="Single"
+                          AlternatingRowBackground="#F8FAFB"
+                          SelectionChanged="HistoryGrid_SelectionChanged"
+                          MouseDoubleClick="HistoryGrid_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Completed" Binding="{Binding Completed}" Width="155" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="145" />
+                        <DataGridTextColumn Header="Source" Binding="{Binding SourceFilename}" Width="*" MinWidth="180" />
+                        <DataGridTextColumn Header="Original size" Binding="{Binding SourceSize}" Width="120" />
+                        <DataGridTextColumn Header="Converted size" Binding="{Binding DestinationSize}" Width="125" />
+                        <DataGridTextColumn Header="Output size" Binding="{Binding OutputPercentage}" Width="105" />
+                        <DataGridTextColumn Header="Space saved" Binding="{Binding SpaceSaved}" Width="120" />
+                        <DataGridTextColumn Header="Converted file" Binding="{Binding DestinationFilename}" Width="*" MinWidth="180" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
         </Border>
 
         <TextBlock x:Name="StatusText"

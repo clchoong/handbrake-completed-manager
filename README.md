@@ -53,6 +53,7 @@ The current Phase 1 implementation provides:
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
 - Test Pipeline validates the event-to-SQLite path in an isolated temporary database.
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
+- Selected history records support source/output playback, Explorer reveal, and path copying; double-click opens the output.
 - Automated tests cover parsing, calculations, fingerprinting, persistence, duplicates, detection, and connection state.
 
 ## Documentation
@@ -60,4 +61,5 @@ The current Phase 1 implementation provides:
 - [Product brief](docs/project-brief.md): product scope, requirements, safety rules, and release phases
 - [Completion receiver](docs/completion-receiver.md): receiver interface, persistence, and local validation
 - [HandBrake connection](docs/handbrake-connection.md): detection, pipeline testing, and completion-action configuration
+- [History file actions](docs/history-file-actions.md): playback, Explorer reveal, path copying, and missing-file behavior
 
