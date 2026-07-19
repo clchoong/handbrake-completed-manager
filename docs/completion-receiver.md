@@ -34,6 +34,8 @@ By default, history is stored at:
 
 Set `HBCM_DATA_DIRECTORY` to place `history.db` in a portable or test data directory.
 
+In the packaged portable edition, the adjacent `portable.mode` marker automatically places the database and other local state under `data` beside the executables. No environment variable is required. See [Portable release](portable-release.md).
+
 ## Idempotency
 
 The receiver creates a fingerprint from normalized source and destination paths, file sizes, and destination modification time. SQLite enforces that fingerprint as unique. Repeated callbacks for the same completed output therefore return success without adding another row.

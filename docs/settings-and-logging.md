@@ -11,7 +11,7 @@ Installed-mode storage uses:
 %LOCALAPPDATA%\HandBrake Completed Manager\logs\
 ```
 
-When `HBCM_DATA_DIRECTORY` is set, both locations are resolved beneath that directory for portable operation and testing.
+When `HBCM_DATA_DIRECTORY` is set, both locations are resolved beneath that directory for custom deployments and testing. In the packaged portable edition, the adjacent `portable.mode` marker automatically places settings and logs under `data` beside the executables. See [Portable release](portable-release.md).
 
 Settings are written atomically through a temporary file. Invalid JSON or unsupported refresh intervals fall back to safe defaults.
 

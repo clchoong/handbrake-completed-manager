@@ -7,7 +7,7 @@ HandBrake Completed Manager is a portable Windows companion application that mai
 - Windows 10 version 1809 (build 17763) or later
 - Windows 11
 - .NET 10 LTS with WPF
-- Self-contained portable distribution is planned for a future release
+- Self-contained portable distribution; no separate .NET installation or administrator access required
 
 Microsoft support for Windows 10 is limited to Windows editions that remain in support. The application target still permits compatible Windows 10 build 1809+ systems to run it.
 
@@ -39,6 +39,14 @@ dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release
 ```
 
+Create and verify the Windows x64 portable package:
+
+```powershell
+.\scripts\publish-portable.ps1
+```
+
+The generated folder and ZIP archive are placed under `artifacts\portable\win-x64\`, which is intentionally excluded from source control. See [Portable release](docs/portable-release.md) for package contents, storage behavior, and verification details.
+
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
 ## Implemented capabilities
@@ -59,6 +67,8 @@ The current Phase 1 implementation provides:
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
 - Local settings control startup visibility, close-to-tray, tray guidance, and history refresh interval.
 - Non-fatal daily diagnostic logs cover desktop and receiver operational events.
+- A marker-based portable mode keeps history, settings, connections, and logs beside the application.
+- Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -69,4 +79,5 @@ The current Phase 1 implementation provides:
 - [Completed history browsing](docs/history-file-actions.md): search, quick filters, sorting, details, file actions, and missing-file behavior
 - [System tray behavior](docs/system-tray.md): close-to-tray lifecycle, status, commands, and Windows shutdown behavior
 - [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
+- [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 
