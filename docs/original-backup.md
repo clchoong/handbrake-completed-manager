@@ -46,4 +46,6 @@ Creating a verified backup does not authorize source replacement. The applicatio
 - Restore or expire backups automatically.
 - Complete or undo a replacement.
 
-Those transitions require additional recovery design, tests, and explicit final confirmation.
+A separate read-only readiness review can now verify the persisted operation and both file pairs again. Passing that review reports only that the prerequisites are currently consistent; it does not enable or perform a transition. See [Finalisation readiness and restart recovery](finalization-readiness.md).
+
+The mutating transitions still require additional transactional design, tests, and explicit final confirmation.

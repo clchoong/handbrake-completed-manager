@@ -96,6 +96,30 @@ public sealed class ReplacementOperationRepository(string databasePath)
         return operations;
     }
 
+    public async Task<IReadOnlyList<ReplacementOperation>> GetRecoveryCandidatesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var operations = new List<ReplacementOperation>();
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, completed_encode_id, status, stage,
+                   source_path, destination_path, final_path, temporary_path, backup_path,
+                   source_size, destination_size, bytes_copied, verification_status,
+                   failure_message, date_created_utc, date_updated_utc
+            FROM replacement_operations
+            WHERE status <> 'Completed'
+            ORDER BY date_updated_utc DESC;
+            """;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            operations.Add(ReadOperation(reader));
+        }
+
+        return operations;
+    }
+
     public async Task<ReplacementOperation?> GetByIdAsync(
         Guid operationId,
         CancellationToken cancellationToken = default)

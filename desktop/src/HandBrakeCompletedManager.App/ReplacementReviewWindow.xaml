@@ -107,6 +107,20 @@
                             Click="DiscardBackupButton_Click"
                             Content="Discard backup file" />
                 </StackPanel>
+                <Border Margin="0,12,0,8" BorderBrush="#9BC2E6" BorderThickness="0,1,0,0" />
+                <DockPanel>
+                    <Button x:Name="CheckFinalizationButton"
+                            DockPanel.Dock="Right"
+                            Width="180"
+                            Height="30"
+                            IsEnabled="False"
+                            Click="CheckFinalizationButton_Click"
+                            Content="Check finalisation readiness" />
+                    <TextBlock x:Name="FinalizationStatusText"
+                               Margin="0,4,10,0"
+                               Text="Finalisation remains disabled."
+                               TextWrapping="Wrap" />
+                </DockPanel>
             </StackPanel>
         </Border>
 

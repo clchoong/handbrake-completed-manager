@@ -23,6 +23,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="HandBrake Completed Manager"
@@ -34,8 +35,17 @@
                            FontSize="14"
                            Foreground="#596573" />
             </StackPanel>
-            <Button x:Name="SettingsButton"
+            <Button x:Name="RecoveryButton"
                     Grid.Column="1"
+                    Width="120"
+                    Height="36"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Click="RecoveryButton_Click"
+                    Content="Recovery (0)"
+                    IsEnabled="False" />
+            <Button x:Name="SettingsButton"
+                    Grid.Column="2"
                     Width="100"
                     Height="36"
                     Margin="0,0,8,0"
@@ -43,7 +53,7 @@
                     Click="SettingsButton_Click"
                     Content="Settings" />
             <Button x:Name="RefreshButton"
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Width="100"
                     Height="36"
                     VerticalAlignment="Center"

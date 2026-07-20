@@ -15,6 +15,7 @@ public partial class ReplacementReviewWindow : Window
     private readonly OriginalBackupRepository _backupRepository;
     private readonly OriginalBackupService _originalBackupService;
     private readonly OriginalBackupCleanupService _originalBackupCleanupService;
+    private readonly FinalizationReadinessService _finalizationReadinessService;
     private readonly ReplacementPreflightService _preflightService = new();
     private ReplacementOperation? _recoveryOperation;
     private OriginalBackupState? _backupState;
@@ -31,7 +32,8 @@ public partial class ReplacementReviewWindow : Window
         ReplacementOperationRepository operationRepository,
         OriginalBackupRepository backupRepository,
         OriginalBackupService originalBackupService,
-        OriginalBackupCleanupService originalBackupCleanupService)
+        OriginalBackupCleanupService originalBackupCleanupService,
+        FinalizationReadinessService finalizationReadinessService)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
@@ -40,6 +42,7 @@ public partial class ReplacementReviewWindow : Window
         ArgumentNullException.ThrowIfNull(backupRepository);
         ArgumentNullException.ThrowIfNull(originalBackupService);
         ArgumentNullException.ThrowIfNull(originalBackupCleanupService);
+        ArgumentNullException.ThrowIfNull(finalizationReadinessService);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
         _temporaryCopyCleanupService = temporaryCopyCleanupService;
@@ -47,6 +50,7 @@ public partial class ReplacementReviewWindow : Window
         _backupRepository = backupRepository;
         _originalBackupService = originalBackupService;
         _originalBackupCleanupService = originalBackupCleanupService;
+        _finalizationReadinessService = finalizationReadinessService;
         InitializeComponent();
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
@@ -105,6 +109,7 @@ public partial class ReplacementReviewWindow : Window
             DiscardTemporaryButton.IsEnabled = false;
             CreateBackupButton.IsEnabled = false;
             DiscardBackupButton.IsEnabled = false;
+            CheckFinalizationButton.IsEnabled = false;
             RecoveryStatusText.Visibility = Visibility.Collapsed;
             await _operationRepository.InitializeAsync();
             var operation = await _operationRepository.GetLatestForCompletedEncodeAsync(
@@ -148,6 +153,7 @@ public partial class ReplacementReviewWindow : Window
             DiscardTemporaryButton.IsEnabled = false;
             CreateBackupButton.IsEnabled = false;
             DiscardBackupButton.IsEnabled = false;
+            CheckFinalizationButton.IsEnabled = false;
             if (updateCopyStatus)
             {
                 CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
@@ -207,6 +213,16 @@ public partial class ReplacementReviewWindow : Window
             backupFileExists &&
             !_copyInProgress &&
             !_backupInProgress;
+        CheckFinalizationButton.IsEnabled =
+            verifiedTemporary &&
+            backupFileExists &&
+            backup?.Status == OriginalBackupStatus.Verified &&
+            operation.Stage == ReplacementOperationStage.BackingUpSource &&
+            !_copyInProgress &&
+            !_backupInProgress;
+        FinalizationStatusText.Text = CheckFinalizationButton.IsEnabled
+            ? "Both artifacts are verified. Run the read-only readiness check before any finalisation design is enabled."
+            : "Finalisation remains disabled until verified temporary and original-backup artifacts are both present.";
     }
 
     private async void PrepareCopyButton_Click(object sender, RoutedEventArgs e)
@@ -501,6 +517,52 @@ public partial class ReplacementReviewWindow : Window
                 $"Backup-file cleanup was refused or failed: {exception.Message} The source was unchanged.";
             BackupStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
             await RefreshRecoveryStateAsync(updateCopyStatus: false);
+        }
+    }
+
+    private async void CheckFinalizationButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null ||
+            _backupState is null ||
+            !CheckFinalizationButton.IsEnabled)
+        {
+            return;
+        }
+
+        CheckFinalizationButton.IsEnabled = false;
+        FinalizationStatusText.Text = "Checking all persisted states, paths, sizes, and SHA-256 equivalence...";
+        try
+        {
+            var readiness = await _finalizationReadinessService.ReviewAsync(
+                _plan,
+                _recoveryOperation,
+                _backupState);
+            FinalizationStatusText.Text = readiness.IsReady
+                ? "READY FOR DESIGN REVIEW — both file pairs match and the final path is clear. No finalisation action is enabled."
+                : "BLOCKED — " + string.Join(" ", readiness.Issues.Select(issue => issue.Message));
+            FinalizationStatusText.Foreground = readiness.IsReady
+                ? System.Windows.Media.Brushes.DarkGreen
+                : System.Windows.Media.Brushes.DarkRed;
+        }
+        catch (OperationCanceledException)
+        {
+            FinalizationStatusText.Text = "Finalisation readiness check cancelled.";
+        }
+        catch (Exception exception)
+        {
+            FinalizationStatusText.Text = $"Finalisation readiness check failed safely: {exception.Message}";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
+        }
+        finally
+        {
+            CheckFinalizationButton.IsEnabled =
+                _recoveryOperation.Stage == ReplacementOperationStage.BackingUpSource &&
+                _recoveryOperation.VerificationStatus == ReplacementVerificationStatus.Verified &&
+                _backupState.Status == OriginalBackupStatus.Verified &&
+                File.Exists(_recoveryOperation.TemporaryPath) &&
+                File.Exists(_backupState.BackupPath) &&
+                !_copyInProgress &&
+                !_backupInProgress;
         }
     }
 

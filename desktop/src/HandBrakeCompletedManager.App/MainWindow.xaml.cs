@@ -26,6 +26,8 @@ public partial class MainWindow : Window
     private readonly OriginalBackupRepository _originalBackupRepository;
     private readonly OriginalBackupService _originalBackupService;
     private readonly OriginalBackupCleanupService _originalBackupCleanupService;
+    private readonly FinalizationReadinessService _finalizationReadinessService = new();
+    private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -36,6 +38,7 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _trayNotificationShown;
     private ApplicationSettings _settings = ApplicationSettings.Default;
+    private IReadOnlyList<ReplacementRecoveryItem> _recoveryItems = [];
 
     public MainWindow()
     {
@@ -56,6 +59,9 @@ public partial class MainWindow : Window
             _replacementOperationRepository,
             _originalBackupRepository);
         _originalBackupCleanupService = new OriginalBackupCleanupService(
+            _replacementOperationRepository,
+            _originalBackupRepository);
+        _replacementRecoveryService = new ReplacementRecoveryService(
             _replacementOperationRepository,
             _originalBackupRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
@@ -90,6 +96,7 @@ public partial class MainWindow : Window
 
         _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application started.");
         await LoadHistoryAsync();
+        await RefreshRecoverySummaryAsync();
         await FindHandBrakeAsync();
         _historyRefreshTimer.Start();
     }
@@ -146,6 +153,36 @@ public partial class MainWindow : Window
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
     {
         await LoadHistoryAsync();
+        await RefreshRecoverySummaryAsync();
+    }
+
+    private async void RecoveryButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RefreshRecoverySummaryAsync();
+        if (_recoveryItems.Count == 0)
+        {
+            StatusText.Text = "No incomplete replacement work requires review.";
+            return;
+        }
+
+        new RecoveryOverviewWindow(_recoveryItems) { Owner = this }.ShowDialog();
+    }
+
+    private async Task RefreshRecoverySummaryAsync()
+    {
+        try
+        {
+            _recoveryItems = await _replacementRecoveryService.ReviewAsync();
+            RecoveryButton.Content = $"Recovery ({_recoveryItems.Count})";
+            RecoveryButton.IsEnabled = _recoveryItems.Count > 0;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _recoveryItems = [];
+            RecoveryButton.Content = "Recovery (?)";
+            RecoveryButton.IsEnabled = false;
+            _ = _logger.LogAsync(DiagnosticLogLevel.Warning, "Replacement recovery state could not be reviewed.", exception);
+        }
     }
 
     private async void HistoryRefreshTimer_Tick(object? sender, EventArgs e)
@@ -515,7 +552,7 @@ public partial class MainWindow : Window
     private void CopySourcePathButton_Click(object sender, RoutedEventArgs e) =>
         CopySelectedPath(row => row.SourcePath, "Source-file path copied.");
 
-    private void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
+    private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
     {
         if (HistoryGrid.SelectedItem is not HistoryRow row)
         {
@@ -533,7 +570,8 @@ public partial class MainWindow : Window
                 _replacementOperationRepository,
                 _originalBackupRepository,
                 _originalBackupService,
-                _originalBackupCleanupService)
+                _originalBackupCleanupService,
+                _finalizationReadinessService)
             {
                 Owner = this
             };
@@ -600,6 +638,7 @@ public partial class MainWindow : Window
                 reviewWindow.CleanupFailure ??
                 reviewWindow.BackupFailure ??
                 reviewWindow.BackupCleanupFailure);
+            await RefreshRecoverySummaryAsync();
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
