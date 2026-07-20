@@ -22,6 +22,8 @@ When completed encodes are removed from HandBrake's Queue, users lose convenient
 
 The product must also restore convenient file actions comparable to those available from HandBrake's Queue.
 
+For converted files that fail manual quality review, the completed-history interface provides a separately confirmed **Recycle output** action. It retains the source and history record, refuses files that changed since capture, refuses unfinished replacement dependencies, and uses the Windows Recycle Bin without a permanent-delete fallback.
+
 ## Target platform
 
 Build the first version for Windows only.
@@ -248,13 +250,10 @@ Each completed record should support:
 * Open converted folder
 * Select source file in File Explorer
 * Select converted file in File Explorer
-* Copy source path
-* Copy converted path
 * Replace source
 * Retry replacement
 * Undo replacement
-* Delete source
-* Delete converted file
+* Recycle converted output
 * Remove from history
 * Add note
 * View technical details
@@ -816,6 +815,8 @@ These rules are mandatory:
 9. Do not automatically replace sources in the initial version.
 10. Do not depend on HandBrake’s completed Queue history.
 
+Output recycling remains separate from Remove from History and source replacement. A successful recycle updates only the recorded availability of the converted output.
+
 ## Initial release scope
 
 Build the project in phases.
@@ -830,6 +831,7 @@ Build the project in phases.
 * Completed history table
 * Play and open file actions
 * Open and select files in File Explorer
+* Guarded output recycling through the Windows Recycle Bin
 * Remove records from history
 * Detect installed and portable HandBrake
 * Manual connection instructions

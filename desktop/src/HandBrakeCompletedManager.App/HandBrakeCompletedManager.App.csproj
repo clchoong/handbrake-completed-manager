@@ -10,6 +10,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\HandBrakeCompletedManager.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +18,10 @@
     <ProjectReference Include="..\HandBrakeCompletedManager.Infrastructure\HandBrakeCompletedManager.Infrastructure.csproj" />
     <ProjectReference Include="..\HandBrakeCompletedManager.Receiver\HandBrakeCompletedManager.Receiver.csproj"
                       ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\HandBrakeCompletedManager.png" />
   </ItemGroup>
 
   <Target Name="CopyCompletionReceiver"

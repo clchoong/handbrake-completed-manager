@@ -71,6 +71,34 @@ public sealed class CompletedEncodeRepository(string databasePath)
         return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
+    public async Task<bool> TryMarkDestinationRecycledAsync(
+        Guid recordId,
+        string expectedDestinationPath,
+        long expectedDestinationSize,
+        DateTimeOffset expectedDestinationLastWriteUtc,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE completed_encodes
+            SET destination_exists = 0,
+                date_updated_utc = $updatedUtc
+            WHERE id = $id
+              AND destination_exists = 1
+              AND destination_path = $destinationPath COLLATE NOCASE
+              AND destination_size = $destinationSize
+              AND destination_last_write_utc = $destinationLastWriteUtc;
+            """;
+        command.Parameters.AddWithValue("$id", recordId.ToString("D"));
+        command.Parameters.AddWithValue("$destinationPath", Path.GetFullPath(expectedDestinationPath));
+        command.Parameters.AddWithValue("$destinationSize", expectedDestinationSize);
+        command.Parameters.AddWithValue("$destinationLastWriteUtc", FormatDate(expectedDestinationLastWriteUtc));
+        command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
     public async Task<IReadOnlyList<CompletedEncode>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {

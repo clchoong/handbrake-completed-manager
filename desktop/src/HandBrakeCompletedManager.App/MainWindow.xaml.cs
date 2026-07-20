@@ -38,6 +38,7 @@ public partial class MainWindow : Window
     private readonly FinalFileRecycleService _finalFileRecycleService;
     private readonly UndoCompletionService _undoCompletionService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
+    private readonly OutputRecycleService _outputRecycleService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -111,6 +112,11 @@ public partial class MainWindow : Window
             _replacementOperationRepository,
             _originalBackupRepository,
             _finalizationTransactionRepository);
+        _outputRecycleService = new OutputRecycleService(
+            _repository,
+            _replacementOperationRepository,
+            _finalizationTransactionRepository,
+            new WindowsRecycleBinService());
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -517,9 +523,8 @@ public partial class MainWindow : Window
         PlaySourceButton.IsEnabled = hasSelection;
         RevealDestinationButton.IsEnabled = hasSelection;
         RevealSourceButton.IsEnabled = hasSelection;
-        CopyDestinationPathButton.IsEnabled = hasSelection;
-        CopySourcePathButton.IsEnabled = hasSelection;
         ReviewReplacementButton.IsEnabled = hasSelection;
+        RecycleOutputButton.IsEnabled = row?.Record.DestinationExists == true;
         RemoveHistoryButton.IsEnabled = hasSelection;
         SelectedRecordText.Text = row is null
             ? "Select a completed encode"
@@ -581,7 +586,7 @@ public partial class MainWindow : Window
         }
 
         DetailsCompletedText.Text = row.Completed;
-        DetailsStatusText.Text = row.Status;
+        DetailsStatusText.Text = $"{row.Status}  |  {row.SourceReplacement}";
         DetailsSourcePathTextBox.Text = row.SourcePath;
         DetailsDestinationPathTextBox.Text = row.DestinationPath;
         DetailsMetricsText.Text =
@@ -617,12 +622,6 @@ public partial class MainWindow : Window
 
     private void RevealSourceButton_Click(object sender, RoutedEventArgs e) =>
         RunSelectedFileAction(_fileActions.Reveal, row => row.SourcePath);
-
-    private void CopyDestinationPathButton_Click(object sender, RoutedEventArgs e) =>
-        CopySelectedPath(row => row.DestinationPath, "Converted-file path copied.");
-
-    private void CopySourcePathButton_Click(object sender, RoutedEventArgs e) =>
-        CopySelectedPath(row => row.SourcePath, "Source-file path copied.");
 
     private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
     {
@@ -786,6 +785,58 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void RecycleOutputButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            $"Move this output file to the Windows Recycle Bin?\n\n" +
+            $"Output: {row.DestinationPath}\n\n" +
+            "The completed-history record and source file will be kept. " +
+            "The output can normally be restored from the Recycle Bin.",
+            "Recycle output file",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            StatusText.Text = "Output recycling cancelled. No files were changed.";
+            return;
+        }
+
+        try
+        {
+            RecycleOutputButton.IsEnabled = false;
+            StatusText.Text = "Verifying and recycling the output...";
+            await _outputRecycleService.RecycleAsync(row.Record);
+            await LoadHistoryAsync();
+            StatusText.Text = "Output moved to the Windows Recycle Bin. History and source were kept.";
+            _ = _logger.LogAsync(
+                DiagnosticLogLevel.Information,
+                "A verified output file was moved to the Windows Recycle Bin; history and source were retained.");
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            StatusText.Text = $"Output was not recycled: {exception.Message}";
+            _ = _logger.LogAsync(
+                DiagnosticLogLevel.Warning,
+                "An output Recycle Bin request was refused or failed safely.",
+                exception);
+        }
+        finally
+        {
+            RecycleOutputButton.IsEnabled =
+                HistoryGrid.SelectedItem is HistoryRow selected && selected.Record.DestinationExists;
+        }
+    }
+
     private async void RemoveHistoryButton_Click(object sender, RoutedEventArgs e)
     {
         if (HistoryGrid.SelectedItem is not HistoryRow row)
@@ -859,17 +910,6 @@ public partial class MainWindow : Window
         StatusText.Text = result.Message;
     }
 
-    private void CopySelectedPath(Func<HistoryRow, string> selectPath, string successMessage)
-    {
-        if (HistoryGrid.SelectedItem is not HistoryRow row)
-        {
-            StatusText.Text = "Select a completed encode first.";
-            return;
-        }
-
-        CopySetupValue(selectPath(row), successMessage);
-    }
-
     private async Task LoadHistoryAsync()
     {
         if (_isLoadingHistory)
@@ -884,12 +924,16 @@ public partial class MainWindow : Window
             StatusText.Text = "Loading completed history...";
             await _repository.InitializeAsync();
             var records = await _repository.GetAllAsync();
+            var replacementStates = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
             var selectedRecordId = (HistoryGrid.SelectedItem as HistoryRow)?.Id;
 
             HistoryRows.Clear();
             foreach (var record in records)
             {
-                HistoryRows.Add(HistoryRow.From(record));
+                var replacementState = replacementStates.GetValueOrDefault(
+                    record.Id,
+                    SourceReplacementState.NotReplaced);
+                HistoryRows.Add(HistoryRow.From(record, replacementState));
             }
 
             ApplyHistoryFilter();
@@ -945,6 +989,7 @@ public sealed record HistoryRow(
     CompletedEncode Record,
     string Completed,
     string Status,
+    string SourceReplacement,
     string SourceFilename,
     string SourceSize,
     string DestinationSize,
@@ -956,16 +1001,28 @@ public sealed record HistoryRow(
     public string SourcePath => Record.SourcePath;
     public string DestinationPath => Record.DestinationPath;
 
-    public static HistoryRow From(CompletedEncode item) => new(
+    public static HistoryRow From(
+        CompletedEncode item,
+        SourceReplacementState replacementState = SourceReplacementState.NotReplaced) => new(
         item,
         item.CompletedAtUtc.ToLocalTime().ToString("g"),
         item.CurrentStatus,
+        FormatReplacementState(replacementState),
         item.SourceFilename,
         FormatNullableBytes(item.SourceSize),
         FormatNullableBytes(item.DestinationSize),
         item.OutputPercentage is null ? "-" : $"{item.OutputPercentage:0.##}%",
         FormatNullableBytes(item.SpaceSavedBytes),
         item.DestinationFilename);
+
+    private static string FormatReplacementState(SourceReplacementState state) => state switch
+    {
+        SourceReplacementState.Replaced => "✓ Replaced",
+        SourceReplacementState.Restored => "Restored",
+        SourceReplacementState.InProgress => "In progress",
+        SourceReplacementState.NeedsAttention => "Needs attention",
+        _ => "Not replaced"
+    };
 
     private static string FormatNullableBytes(long? bytes)
     {

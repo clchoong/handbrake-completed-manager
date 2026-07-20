@@ -21,18 +21,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Width="46"
-                        Height="46"
-                        Margin="0,0,14,0"
-                        Background="{StaticResource AccentBrush}"
-                        CornerRadius="12">
-                    <TextBlock HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="20"
-                               FontWeight="Bold"
-                               Foreground="White"
-                               Text="HC" />
-                </Border>
+                <Image Width="46"
+                       Height="46"
+                       Margin="0,0,14,0"
+                       Source="Assets/HandBrakeCompletedManager.png"
+                       Stretch="Uniform" />
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock FontSize="22"
                                FontWeight="SemiBold"
@@ -317,9 +310,8 @@
                                     <Button x:Name="PlaySourceButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="PlaySourceButton_Click" Content="Play source" IsEnabled="False" />
                                     <Button x:Name="RevealDestinationButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="RevealDestinationButton_Click" Content="Show output" IsEnabled="False" />
                                     <Button x:Name="RevealSourceButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="RevealSourceButton_Click" Content="Show source" IsEnabled="False" />
-                                    <Button x:Name="CopyDestinationPathButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="CopyDestinationPathButton_Click" Content="Copy output path" IsEnabled="False" />
-                                    <Button x:Name="CopySourcePathButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="CopySourcePathButton_Click" Content="Copy source path" IsEnabled="False" />
-                                    <Button x:Name="RemoveHistoryButton" Style="{StaticResource DangerButtonStyle}" Click="RemoveHistoryButton_Click" Content="Remove history" IsEnabled="False" />
+                                    <Button x:Name="RecycleOutputButton" Margin="0,0,6,0" Style="{StaticResource DangerButtonStyle}" Click="RecycleOutputButton_Click" Content="Recycle output" IsEnabled="False" />
+                                    <Button x:Name="RemoveHistoryButton" Style="{StaticResource CompactButtonStyle}" Click="RemoveHistoryButton_Click" Content="Remove history" IsEnabled="False" />
                                 </WrapPanel>
                             </Grid>
                         </Border>
@@ -336,6 +328,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
                                 <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" SortMemberPath="Record.CurrentStatus" Width="140" />
+                                <DataGridTextColumn Header="SOURCE REPLACEMENT" Binding="{Binding SourceReplacement}" SortMemberPath="SourceReplacement" Width="145" />
                                 <DataGridTextColumn Header="SOURCE" Binding="{Binding SourceFilename}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="170" />
                                 <DataGridTextColumn Header="ORIGINAL" Binding="{Binding SourceSize}" SortMemberPath="Record.SourceSize" Width="110" />
                                 <DataGridTextColumn Header="CONVERTED" Binding="{Binding DestinationSize}" SortMemberPath="Record.DestinationSize" Width="115" />

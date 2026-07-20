@@ -48,9 +48,7 @@ Create and verify the Windows x64 portable package:
 
 The generated folder and ZIP archive are placed under `artifacts\portable\win-x64\`, which is intentionally excluded from source control. See [Portable release](docs/portable-release.md) for package contents, storage behavior, and verification details.
 
-The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
-
-Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion, forced Windows Recycle Bin source retirement, atomic forward completion, record-specific restart continuation, and a complete source-first undo workflow. Permanent deletion is never used for source or promoted-final retirement.
+Phase 1 established non-destructive completed-history management. Phase 2 adds replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion, forced Windows Recycle Bin source retirement, atomic forward completion, record-specific restart continuation, and a complete source-first undo workflow. Permanent deletion is not used for managed media-file retirement.
 
 ## Implemented capabilities
 
@@ -64,8 +62,10 @@ The current Phase 1 implementation provides:
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
 - Test Pipeline validates the event-to-SQLite path in an isolated temporary database.
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
-- Selected history records support source/output playback, Explorer reveal, and path copying; double-click opens the output.
+- Selected history records support source/output playback and Explorer reveal; double-click opens the output.
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
+- The history table clearly identifies source replacement as not replaced, in progress, needing attention, replaced, or restored.
+- **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
 - Local settings control startup visibility, close-to-tray, tray guidance, and history refresh interval.
@@ -87,7 +87,7 @@ The current Phase 1 implementation provides:
 - A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, a focused one-click replacement experience, and collapsed advanced recovery controls across Windows 10 and Windows 11.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
-- Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
+- Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, file actions, guarded output recycling, and replacement-state presentation.
 
 ## Documentation
 

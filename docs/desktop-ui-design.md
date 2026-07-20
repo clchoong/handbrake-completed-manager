@@ -10,6 +10,8 @@ The desktop interface uses a shared high-end visual system designed for clear da
 - Neutral surfaces, restrained borders, rounded geometry, and Segoe UI typography provide hierarchy without decorative clutter.
 - Success, warning, and destructive actions use consistent green, amber, and red semantic treatments.
 - Completed history remains the central workspace, with search and filters next to the section title and record actions grouped around the current selection.
+- An original navy, white, and amber film/check emblem identifies the executable, every application window, and the dashboard header at small and large sizes.
+- The history action bar separates the primary source-replacement workflow, everyday play/reveal actions, output recycling, and record-only removal by visual priority.
 
 ## Replacement experience
 
@@ -26,6 +28,8 @@ This keeps the normal path simple without removing the checkpoint-specific contr
 ## Shared design system
 
 `Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, and settings windows consume the same resources.
+
+The source-replacement column uses plain-language durable states. **✓ Replaced** is shown only for the terminal `Completed` checkpoint, while incomplete and recovery-required work remains visibly distinct.
 
 The interface preserves native window chrome, keyboard navigation, default/cancel behavior, readable focus indication, and Windows accessibility automation names for key search, filter, connection, and file-path controls.
 

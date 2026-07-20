@@ -165,6 +165,40 @@ public sealed class ReplacementOperationRepository(string databasePath)
         return await reader.ReadAsync(cancellationToken) ? ReadOperation(reader) : null;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, SourceReplacementState>> GetLatestSourceReplacementStatesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var states = new Dictionary<Guid, SourceReplacementState>();
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            WITH latest AS (
+                SELECT id, completed_encode_id, status,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY completed_encode_id
+                           ORDER BY date_updated_utc DESC, date_created_utc DESC) AS position
+                FROM replacement_operations)
+            SELECT latest.completed_encode_id, latest.status, finalization.checkpoint
+            FROM latest
+            LEFT JOIN finalization_transactions AS finalization
+                ON finalization.operation_id = latest.id
+            WHERE latest.position = 1;
+            """;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var recordId = Guid.Parse(reader.GetString(0));
+            var operationStatus = Enum.Parse<ReplacementOperationStatus>(reader.GetString(1));
+            var checkpoint = reader.IsDBNull(2)
+                ? (FinalizationCheckpoint?)null
+                : Enum.Parse<FinalizationCheckpoint>(reader.GetString(2));
+            states[recordId] = GetSourceReplacementState(operationStatus, checkpoint);
+        }
+
+        return states;
+    }
+
     public async Task<bool> TryCancelForTemporaryCleanupAsync(
         Guid operationId,
         DateTimeOffset expectedUpdatedUtc,
@@ -269,6 +303,21 @@ public sealed class ReplacementOperationRepository(string databasePath)
         reader.IsDBNull(13) ? null : reader.GetString(13),
         ParseDate(reader.GetString(14)),
         ParseDate(reader.GetString(15)));
+
+    private static SourceReplacementState GetSourceReplacementState(
+        ReplacementOperationStatus operationStatus,
+        FinalizationCheckpoint? checkpoint) => checkpoint switch
+        {
+            FinalizationCheckpoint.Completed => SourceReplacementState.Replaced,
+            FinalizationCheckpoint.Undone => SourceReplacementState.Restored,
+            FinalizationCheckpoint.RecoveryRequired => SourceReplacementState.NeedsAttention,
+            not null => SourceReplacementState.InProgress,
+            null when operationStatus is ReplacementOperationStatus.Planned or ReplacementOperationStatus.InProgress =>
+                SourceReplacementState.InProgress,
+            null when operationStatus == ReplacementOperationStatus.Failed => SourceReplacementState.NeedsAttention,
+            null when operationStatus == ReplacementOperationStatus.Completed => SourceReplacementState.NeedsAttention,
+            _ => SourceReplacementState.NotReplaced
+        };
 
     private static string FormatDate(DateTimeOffset value) =>
         value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
