@@ -221,6 +221,69 @@ public sealed class FinalizationTransactionRepository(string databasePath)
         return true;
     }
 
+    public async Task<bool> TryCompleteUndoAsync(
+        Guid operationId,
+        int expectedRevision,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (expectedRevision < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedRevision));
+        }
+
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var databaseTransaction = connection.BeginTransaction();
+        await using (var journalCommand = connection.CreateCommand())
+        {
+            journalCommand.Transaction = databaseTransaction;
+            journalCommand.CommandText = """
+                UPDATE finalization_transactions
+                SET checkpoint = 'Undone',
+                    revision = revision + 1,
+                    failure_message = NULL,
+                    date_updated_utc = $updatedUtc
+                WHERE operation_id = $operationId
+                  AND checkpoint = 'FinalRecycled'
+                  AND revision = $expectedRevision;
+                """;
+            journalCommand.Parameters.AddWithValue("$operationId", operationId.ToString("D"));
+            journalCommand.Parameters.AddWithValue("$expectedRevision", expectedRevision);
+            journalCommand.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+            if (await journalCommand.ExecuteNonQueryAsync(cancellationToken) != 1)
+            {
+                await databaseTransaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+        }
+
+        await using (var historyCommand = connection.CreateCommand())
+        {
+            historyCommand.Transaction = databaseTransaction;
+            historyCommand.CommandText = """
+                UPDATE completed_encodes
+                SET source_exists = 1,
+                    date_updated_utc = $updatedUtc
+                WHERE id = (
+                    SELECT completed_encode_id
+                    FROM replacement_operations
+                    WHERE id = $operationId
+                      AND status = 'Completed'
+                      AND stage = 'Completed');
+                """;
+            historyCommand.Parameters.AddWithValue("$operationId", operationId.ToString("D"));
+            historyCommand.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+            if (await historyCommand.ExecuteNonQueryAsync(cancellationToken) != 1)
+            {
+                await databaseTransaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+        }
+
+        await databaseTransaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder

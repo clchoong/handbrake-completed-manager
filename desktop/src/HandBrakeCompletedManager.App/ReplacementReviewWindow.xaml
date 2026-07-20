@@ -138,6 +138,35 @@
                                 Click="CompleteFinalizationButton_Click"
                                 Content="Complete finalisation" />
                     </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0" HorizontalAlignment="Right">
+                        <Button x:Name="BeginUndoButton"
+                                Width="125"
+                                Height="30"
+                                Margin="0,0,8,0"
+                                IsEnabled="False"
+                                Click="BeginUndoButton_Click"
+                                Content="Prepare undo" />
+                        <Button x:Name="RestoreSourceButton"
+                                Width="140"
+                                Height="30"
+                                Margin="0,0,8,0"
+                                IsEnabled="False"
+                                Click="RestoreSourceButton_Click"
+                                Content="Restore original source" />
+                        <Button x:Name="RecycleFinalButton"
+                                Width="160"
+                                Height="30"
+                                Margin="0,0,8,0"
+                                IsEnabled="False"
+                                Click="RecycleFinalButton_Click"
+                                Content="Recycle promoted final" />
+                        <Button x:Name="CompleteUndoButton"
+                                Width="125"
+                                Height="30"
+                                IsEnabled="False"
+                                Click="CompleteUndoButton_Click"
+                                Content="Complete undo" />
+                    </WrapPanel>
                     <TextBlock x:Name="FinalizationStatusText"
                                Margin="0,6,0,0"
                                Text="Finalisation remains disabled."

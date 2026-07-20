@@ -47,4 +47,4 @@ Creating a verified backup does not authorize source replacement. The applicatio
 
 A separate read-only readiness review can now verify the persisted operation and both file pairs again. Passing that review reports only that the prerequisites are currently consistent; it does not enable or perform a transition. See [Finalisation readiness and restart recovery](finalization-readiness.md).
 
-Atomic promotion is available as a separate guarded step and leaves the source untouched. After promotion, source retirement is available only through a separate confirmed Windows Recycle Bin operation. Transaction completion and desktop undo remain disabled; verified source restoration exists as a tested backend recovery boundary.
+Atomic promotion is available as a separate guarded step and leaves the source untouched. After promotion, source retirement is available only through a separate confirmed Windows Recycle Bin operation. The backup remains mandatory through atomic forward completion and the complete [guarded undo workflow](undo-workflow.md).

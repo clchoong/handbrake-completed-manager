@@ -1,6 +1,6 @@
 # Finalisation transaction design
 
-Finalisation and undo are modelled as revisioned, durable transactions. Atomic temporary-to-final promotion and explicitly confirmed source recycling are enabled in the desktop review. Verified source restoration is implemented and tested as the recovery foundation for future undo.
+Finalisation and undo are modelled as revisioned, durable transactions. The desktop implements the complete forward transaction and a source-first undo transaction, with explicit confirmation before every file transition.
 
 ## Preparation boundary
 
@@ -50,4 +50,4 @@ The verified backup is mandatory throughout forward and undo recovery. Every leg
 
 ## Current execution boundary
 
-The desktop review may advance `Prepared` through promotion and source recycling to `SourceRecycled`, then atomically close the journal, replacement operation, and history availability state at `Completed`. These guarded processes are documented in [Atomic final-file promotion](atomic-final-promotion.md), [Guarded source recycling](source-recycling.md), and [Forward completion and restart continuation](forward-completion-and-recovery.md). The backend restoration process documented in [Verified source restoration](source-restoration.md) may advance a prepared undo through `RestoreSourceIntentRecorded` to `SourceRestored`, but no desktop command can currently initiate it. No service recycles the final file or marks undo complete.
+The desktop review advances the forward transaction from `Prepared` through atomic promotion, source recycling, and atomic completion. A completed transaction can then advance through `UndoPrepared`, verified source restoration, promoted-final recycling, and atomic `Undone` completion. These processes are documented in [Atomic final-file promotion](atomic-final-promotion.md), [Guarded source recycling](source-recycling.md), [Forward completion and restart continuation](forward-completion-and-recovery.md), and [Guarded replacement undo](undo-workflow.md).

@@ -32,6 +32,10 @@ public partial class MainWindow : Window
     private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly SourceRecycleService _sourceRecycleService;
     private readonly FinalizationCompletionService _finalizationCompletionService;
+    private readonly UndoPreparationService _undoPreparationService;
+    private readonly SourceRestorationService _sourceRestorationService;
+    private readonly FinalFileRecycleService _finalFileRecycleService;
+    private readonly UndoCompletionService _undoCompletionService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
@@ -76,6 +80,19 @@ public partial class MainWindow : Window
             _finalizationTransactionRepository,
             new WindowsRecycleBinService());
         _finalizationCompletionService = new FinalizationCompletionService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository);
+        _undoPreparationService = new UndoPreparationService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository);
+        _sourceRestorationService = new SourceRestorationService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository);
+        _finalFileRecycleService = new FinalFileRecycleService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository,
+            new WindowsRecycleBinService());
+        _undoCompletionService = new UndoCompletionService(
             _replacementOperationRepository,
             _finalizationTransactionRepository);
         _replacementRecoveryService = new ReplacementRecoveryService(
@@ -619,13 +636,27 @@ public partial class MainWindow : Window
                 _finalizationPreparationService,
                 _finalizationPromotionService,
                 _sourceRecycleService,
-                _finalizationCompletionService)
+                _finalizationCompletionService,
+                _undoPreparationService,
+                _sourceRestorationService,
+                _finalFileRecycleService,
+                _undoCompletionService)
             {
                 Owner = this
             };
             reviewWindow.ShowDialog();
             await LoadHistoryAsync();
-            StatusText.Text = reviewWindow.FinalizationCompletionResult is not null
+            StatusText.Text = reviewWindow.UndoCompletionResult is not null
+                ? "Undo completed. The original source is restored, the promoted final is in the Windows Recycle Bin, and the verified backup remains available."
+                : reviewWindow.FinalFileRecycleResult is not null
+                    ? "Promoted final file moved to the Windows Recycle Bin. The restored source and verified backup remain available."
+                : reviewWindow.SourceRestorationResult is not null
+                    ? "Original source restored and verified. The promoted final file remains untouched until separate confirmation."
+                : reviewWindow.UndoPreparationResult is not null
+                    ? "Undo prepared. Restore the verified original source before touching the promoted final file."
+                : reviewWindow.UndoFailure is not null
+                    ? $"Undo requires recovery review: {reviewWindow.UndoFailure.Message}"
+                : reviewWindow.FinalizationCompletionResult is not null
                 ? "Replacement finalisation completed. The promoted final file and verified original backup remain available."
                 : reviewWindow.FinalizationCompletionFailure is not null
                     ? $"Finalisation completion requires recovery review: {reviewWindow.FinalizationCompletionFailure.Message}"
@@ -638,7 +669,7 @@ public partial class MainWindow : Window
                 : reviewWindow.PromotionFailure is not null
                     ? $"Atomic promotion requires recovery review: {reviewWindow.PromotionFailure.Message}"
                 : reviewWindow.CopyResult is not null
-                    ? "Verified temporary copy created. Original backup can now be prepared; final replacement remains disabled."
+                    ? "Verified temporary copy created. The separate original-backup step can now be prepared."
                 : reviewWindow.BackupResult is not null
                     ? "Verified original-backup copy created. The source remains in place; finalisation readiness can now be checked."
                 : reviewWindow.BackupCleanupResult is not null
@@ -662,6 +693,7 @@ public partial class MainWindow : Window
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
                 reviewWindow.CopyFailure is not null ||
+                reviewWindow.UndoFailure is not null ||
                 reviewWindow.FinalizationCompletionFailure is not null ||
                 reviewWindow.SourceRecycleFailure is not null ||
                 reviewWindow.PromotionFailure is not null ||
@@ -675,7 +707,15 @@ public partial class MainWindow : Window
                  !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
-                reviewWindow.FinalizationCompletionResult is not null
+                reviewWindow.UndoCompletionResult is not null
+                    ? "The replacement undo transaction completed atomically."
+                : reviewWindow.FinalFileRecycleResult is not null
+                    ? "The promoted final file was moved to the Windows Recycle Bin during undo."
+                : reviewWindow.SourceRestorationResult is not null
+                    ? "The original source was restored and verified during undo."
+                : reviewWindow.UndoPreparationResult is not null
+                    ? "Undo was prepared after verifying the completed replacement artifacts."
+                : reviewWindow.FinalizationCompletionResult is not null
                     ? "The replacement finalisation transaction completed atomically."
                 : reviewWindow.SourceRecycleResult is not null
                     ? "The verified original source was moved to the Windows Recycle Bin."
@@ -705,6 +745,7 @@ public partial class MainWindow : Window
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
                 reviewWindow.CopyFailure ??
+                reviewWindow.UndoFailure ??
                 reviewWindow.FinalizationCompletionFailure ??
                 reviewWindow.SourceRecycleFailure ??
                 reviewWindow.PromotionFailure ??

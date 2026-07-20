@@ -30,8 +30,8 @@ The Windows adapter suppresses shell confirmation because the application alread
 - A missing source without a prior intent checkpoint is never interpreted as successful recycling.
 - Locked, altered, missing, or ambiguous protected artifacts stop automatic continuation and persist a recovery message.
 
-The verified backup and promoted final file are never moved, renamed, truncated, recycled, or deleted by this operation. The source-restoration backend remains the mandatory recovery foundation for future undo.
+The verified backup and promoted final file are never moved, renamed, truncated, recycled, or deleted by this operation. Verified source restoration remains the mandatory first file transition during later undo.
 
 ## Remaining safety boundary
 
-After `SourceRecycled`, [Forward completion and restart continuation](forward-completion-and-recovery.md) performs a final read-only integrity check and atomically closes the SQLite transaction. Desktop undo and final-file recycling remain disabled.
+After `SourceRecycled`, [Forward completion and restart continuation](forward-completion-and-recovery.md) performs a final read-only integrity check and atomically closes the SQLite transaction. A separately confirmed [guarded undo](undo-workflow.md) may later restore the source and recycle the promoted final.

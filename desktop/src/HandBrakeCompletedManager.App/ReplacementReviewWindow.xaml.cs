@@ -21,6 +21,10 @@ public partial class ReplacementReviewWindow : Window
     private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly SourceRecycleService _sourceRecycleService;
     private readonly FinalizationCompletionService _finalizationCompletionService;
+    private readonly UndoPreparationService _undoPreparationService;
+    private readonly SourceRestorationService _sourceRestorationService;
+    private readonly FinalFileRecycleService _finalFileRecycleService;
+    private readonly UndoCompletionService _undoCompletionService;
     private readonly ReplacementPreflightService _preflightService = new();
     private ReplacementOperation? _recoveryOperation;
     private OriginalBackupState? _backupState;
@@ -32,6 +36,7 @@ public partial class ReplacementReviewWindow : Window
     private bool _promotionInProgress;
     private bool _sourceRecycleInProgress;
     private bool _completionInProgress;
+    private bool _undoInProgress;
     private bool _closeWhenFinished;
 
     public ReplacementReviewWindow(
@@ -47,7 +52,11 @@ public partial class ReplacementReviewWindow : Window
         FinalizationPreparationService finalizationPreparationService,
         FinalizationPromotionService finalizationPromotionService,
         SourceRecycleService sourceRecycleService,
-        FinalizationCompletionService finalizationCompletionService)
+        FinalizationCompletionService finalizationCompletionService,
+        UndoPreparationService undoPreparationService,
+        SourceRestorationService sourceRestorationService,
+        FinalFileRecycleService finalFileRecycleService,
+        UndoCompletionService undoCompletionService)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
@@ -62,6 +71,10 @@ public partial class ReplacementReviewWindow : Window
         ArgumentNullException.ThrowIfNull(finalizationPromotionService);
         ArgumentNullException.ThrowIfNull(sourceRecycleService);
         ArgumentNullException.ThrowIfNull(finalizationCompletionService);
+        ArgumentNullException.ThrowIfNull(undoPreparationService);
+        ArgumentNullException.ThrowIfNull(sourceRestorationService);
+        ArgumentNullException.ThrowIfNull(finalFileRecycleService);
+        ArgumentNullException.ThrowIfNull(undoCompletionService);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
         _temporaryCopyCleanupService = temporaryCopyCleanupService;
@@ -75,6 +88,10 @@ public partial class ReplacementReviewWindow : Window
         _finalizationPromotionService = finalizationPromotionService;
         _sourceRecycleService = sourceRecycleService;
         _finalizationCompletionService = finalizationCompletionService;
+        _undoPreparationService = undoPreparationService;
+        _sourceRestorationService = sourceRestorationService;
+        _finalFileRecycleService = finalFileRecycleService;
+        _undoCompletionService = undoCompletionService;
         InitializeComponent();
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
@@ -99,6 +116,11 @@ public partial class ReplacementReviewWindow : Window
     public Exception? SourceRecycleFailure { get; private set; }
     public FinalizationCompletionResult? FinalizationCompletionResult { get; private set; }
     public Exception? FinalizationCompletionFailure { get; private set; }
+    public UndoPreparationResult? UndoPreparationResult { get; private set; }
+    public SourceRestorationResult? SourceRestorationResult { get; private set; }
+    public FinalFileRecycleResult? FinalFileRecycleResult { get; private set; }
+    public UndoCompletionResult? UndoCompletionResult { get; private set; }
+    public Exception? UndoFailure { get; private set; }
 
     private void ApplyPlan(ReplacementPlan plan)
     {
@@ -144,6 +166,10 @@ public partial class ReplacementReviewWindow : Window
             PromoteFinalButton.IsEnabled = false;
             RecycleSourceButton.IsEnabled = false;
             CompleteFinalizationButton.IsEnabled = false;
+            BeginUndoButton.IsEnabled = false;
+            RestoreSourceButton.IsEnabled = false;
+            RecycleFinalButton.IsEnabled = false;
+            CompleteUndoButton.IsEnabled = false;
             RecoveryStatusText.Visibility = Visibility.Collapsed;
             await _operationRepository.InitializeAsync();
             var operation = await _operationRepository.GetLatestForCompletedEncodeAsync(
@@ -173,6 +199,7 @@ public partial class ReplacementReviewWindow : Window
                 _finalizationTransaction = await _finalizationTransactionRepository.GetAsync(operation.Id);
                 if (_finalizationTransaction is not null)
                 {
+                    _recoveryOperation = operation;
                     DiscardTemporaryButton.IsEnabled = false;
                 }
                 ApplyBackupState(operation, _backupState, _finalizationTransaction);
@@ -196,6 +223,10 @@ public partial class ReplacementReviewWindow : Window
             PromoteFinalButton.IsEnabled = false;
             RecycleSourceButton.IsEnabled = false;
             CompleteFinalizationButton.IsEnabled = false;
+            BeginUndoButton.IsEnabled = false;
+            RestoreSourceButton.IsEnabled = false;
+            RecycleFinalButton.IsEnabled = false;
+            CompleteUndoButton.IsEnabled = false;
             if (updateCopyStatus)
             {
                 CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
@@ -272,7 +303,8 @@ public partial class ReplacementReviewWindow : Window
             !_backupInProgress &&
             !_promotionInProgress &&
             !_sourceRecycleInProgress &&
-            !_completionInProgress;
+            !_completionInProgress &&
+            !_undoInProgress;
         PromoteFinalButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.PromoteTemporaryIntentRecorded
             ? "Recover promotion"
             : "Promote verified copy";
@@ -284,7 +316,8 @@ public partial class ReplacementReviewWindow : Window
             !_backupInProgress &&
             !_promotionInProgress &&
             !_sourceRecycleInProgress &&
-            !_completionInProgress;
+            !_completionInProgress &&
+            !_undoInProgress;
         RecycleSourceButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.RecycleSourceIntentRecorded
             ? "Recover source recycle"
             : "Recycle original source";
@@ -294,10 +327,37 @@ public partial class ReplacementReviewWindow : Window
             !_backupInProgress &&
             !_promotionInProgress &&
             !_sourceRecycleInProgress &&
-            !_completionInProgress;
+            !_completionInProgress &&
+            !_undoInProgress;
+        BeginUndoButton.IsEnabled =
+            finalizationTransaction?.Checkpoint == FinalizationCheckpoint.Completed &&
+            !_copyInProgress && !_backupInProgress && !_promotionInProgress &&
+            !_sourceRecycleInProgress && !_completionInProgress && !_undoInProgress;
+        RestoreSourceButton.IsEnabled =
+            finalizationTransaction?.Checkpoint is
+                FinalizationCheckpoint.UndoPrepared or FinalizationCheckpoint.RestoreSourceIntentRecorded &&
+            !_copyInProgress && !_backupInProgress && !_promotionInProgress &&
+            !_sourceRecycleInProgress && !_completionInProgress && !_undoInProgress;
+        RestoreSourceButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.RestoreSourceIntentRecorded
+            ? "Recover source restore"
+            : "Restore original source";
+        RecycleFinalButton.IsEnabled =
+            finalizationTransaction?.Checkpoint is
+                FinalizationCheckpoint.SourceRestored or FinalizationCheckpoint.RecycleFinalIntentRecorded &&
+            !_copyInProgress && !_backupInProgress && !_promotionInProgress &&
+            !_sourceRecycleInProgress && !_completionInProgress && !_undoInProgress;
+        RecycleFinalButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.RecycleFinalIntentRecorded
+            ? "Recover final recycle"
+            : "Recycle promoted final";
+        CompleteUndoButton.IsEnabled =
+            finalizationTransaction?.Checkpoint == FinalizationCheckpoint.FinalRecycled &&
+            !_copyInProgress && !_backupInProgress && !_promotionInProgress &&
+            !_sourceRecycleInProgress && !_completionInProgress && !_undoInProgress;
         FinalizationStatusText.Foreground = finalizationTransaction?.Checkpoint switch
         {
-            FinalizationCheckpoint.FinalPromoted or FinalizationCheckpoint.SourceRecycled or FinalizationCheckpoint.Completed
+            FinalizationCheckpoint.FinalPromoted or FinalizationCheckpoint.SourceRecycled or FinalizationCheckpoint.Completed or
+            FinalizationCheckpoint.UndoPrepared or FinalizationCheckpoint.SourceRestored or FinalizationCheckpoint.FinalRecycled or
+            FinalizationCheckpoint.Undone
                 when string.IsNullOrWhiteSpace(finalizationTransaction.FailureMessage) => System.Windows.Media.Brushes.DarkGreen,
             FinalizationCheckpoint.PromoteTemporaryIntentRecorded when !string.IsNullOrWhiteSpace(finalizationTransaction.FailureMessage) =>
                 System.Windows.Media.Brushes.DarkRed,
@@ -321,7 +381,19 @@ public partial class ReplacementReviewWindow : Window
                 $"Original source moved to the Windows Recycle Bin. Complete finalisation to atomically close the transaction after one last backup/final integrity check. " +
                 $"{finalizationTransaction.FailureMessage ?? string.Empty}",
             FinalizationCheckpoint.Completed =>
-                "Replacement finalisation completed. The promoted final file and verified original backup remain available for future undo.",
+                "Replacement finalisation completed. Prepare undo to revalidate the final file and backup before restoring the source.",
+            FinalizationCheckpoint.UndoPrepared =>
+                "Undo prepared. Restore and verify the original source before the promoted final file can be touched.",
+            FinalizationCheckpoint.RestoreSourceIntentRecorded =>
+                $"Source restoration recovery is required. {finalizationTransaction.FailureMessage ?? "The restore artifact will be verified before continuing."}",
+            FinalizationCheckpoint.SourceRestored =>
+                "Original source restored and verified. The promoted final may now be moved to the Windows Recycle Bin after separate confirmation.",
+            FinalizationCheckpoint.RecycleFinalIntentRecorded =>
+                $"Promoted-final recycling recovery is required. {finalizationTransaction.FailureMessage ?? "The source and backup will be verified before continuing."}",
+            FinalizationCheckpoint.FinalRecycled =>
+                "Promoted final moved to the Windows Recycle Bin. Complete undo to atomically restore source availability in history.",
+            FinalizationCheckpoint.Undone =>
+                "Undo completed. The original source and verified backup remain available; the promoted final is in the Windows Recycle Bin.",
             not null =>
                 $"Transaction checkpoint: {finalizationTransaction.Checkpoint} (revision {finalizationTransaction.Revision}). Further file execution is disabled.",
             _ when CheckFinalizationButton.IsEnabled =>
@@ -391,7 +463,7 @@ public partial class ReplacementReviewWindow : Window
                 $"SHA-256: {CopyResult.Sha256}";
             CopyStatusText.Foreground = System.Windows.Media.Brushes.DarkGreen;
             RecoveryStatusText.Text =
-                "The verified temporary copy is retained. Source backup and final replacement are still disabled.";
+                "The verified temporary copy is retained. Prepare the separate original backup before finalisation readiness can be checked.";
             RecoveryStatusText.Visibility = Visibility.Visible;
         }
         catch (OperationCanceledException)
@@ -837,6 +909,179 @@ public partial class ReplacementReviewWindow : Window
         }
     }
 
+    private async void BeginUndoButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null || !BeginUndoButton.IsEnabled || _undoInProgress)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            "Prepare undo for this completed replacement?\n\n" +
+            $"Restore source to: {_recoveryOperation.SourcePath}\n" +
+            $"Verified backup: {_recoveryOperation.BackupPath}\n" +
+            $"Promoted final: {_recoveryOperation.FinalPath}\n\n" +
+            "This step only verifies the completed artifacts and records undo preparation. " +
+            "It does not move any file. The source must be restored and verified before the promoted final can be recycled.",
+            "Prepare replacement undo",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        SetUndoBusy("Verifying the completed replacement and preparing undo...");
+        try
+        {
+            UndoPreparationResult = await _undoPreparationService.PrepareAsync(_recoveryOperation.Id);
+            UndoFailure = null;
+        }
+        catch (Exception exception)
+        {
+            UndoFailure = exception;
+        }
+        finally
+        {
+            await FinishUndoActionAsync();
+        }
+    }
+
+    private async void RestoreSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null || !RestoreSourceButton.IsEnabled || _undoInProgress)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            "Restore and verify the original source from its backup?\n\n" +
+            $"Backup: {_recoveryOperation.BackupPath}\n" +
+            $"Restore to: {_recoveryOperation.SourcePath}\n\n" +
+            "The source path must be empty and will never be overwritten. " +
+            "The promoted final and backup remain unchanged. A matching partial restore can resume safely.",
+            "Restore original source",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        SetUndoBusy("Restoring and SHA-256 verifying the original source...");
+        try
+        {
+            SourceRestorationResult = await _sourceRestorationService.RestoreAsync(_recoveryOperation.Id);
+            UndoFailure = null;
+        }
+        catch (Exception exception)
+        {
+            UndoFailure = exception;
+        }
+        finally
+        {
+            await FinishUndoActionAsync();
+        }
+    }
+
+    private async void RecycleFinalButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null || !RecycleFinalButton.IsEnabled || _undoInProgress)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            "Move the promoted final file to the Windows Recycle Bin?\n\n" +
+            $"Promoted final: {_recoveryOperation.FinalPath}\n" +
+            $"Restored source: {_recoveryOperation.SourcePath}\n" +
+            $"Verified backup: {_recoveryOperation.BackupPath}\n\n" +
+            "The restored source and backup will be re-verified and left unchanged. " +
+            "If Windows cannot guarantee a Recycle Bin operation, this action fails instead of deleting permanently.",
+            "Recycle promoted final file",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        SetUndoBusy("Revalidating the restored source and backup before recording promoted-final recycling intent...");
+        try
+        {
+            FinalFileRecycleResult = await _finalFileRecycleService.RecycleAsync(_recoveryOperation.Id);
+            UndoFailure = null;
+        }
+        catch (Exception exception)
+        {
+            UndoFailure = exception;
+        }
+        finally
+        {
+            await FinishUndoActionAsync();
+        }
+    }
+
+    private async void CompleteUndoButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null || !CompleteUndoButton.IsEnabled || _undoInProgress)
+        {
+            return;
+        }
+
+        SetUndoBusy("Verifying the restored source and backup before atomic undo completion...");
+        try
+        {
+            UndoCompletionResult = await _undoCompletionService.CompleteAsync(_recoveryOperation.Id);
+            UndoFailure = null;
+        }
+        catch (Exception exception)
+        {
+            UndoFailure = exception;
+        }
+        finally
+        {
+            await FinishUndoActionAsync();
+        }
+    }
+
+    private async Task FinishUndoActionAsync()
+    {
+        _undoInProgress = false;
+        await RefreshRecoveryStateAsync(updateCopyStatus: false);
+        if (UndoFailure is not null)
+        {
+            FinalizationStatusText.Text = $"Undo stopped safely: {UndoFailure.Message} Recovery review retained the current checkpoint.";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
+        }
+    }
+
+    private void SetUndoBusy(string status)
+    {
+        _undoInProgress = true;
+        UndoPreparationResult = null;
+        SourceRestorationResult = null;
+        FinalFileRecycleResult = null;
+        UndoCompletionResult = null;
+        UndoFailure = null;
+        BeginUndoButton.IsEnabled = false;
+        RestoreSourceButton.IsEnabled = false;
+        RecycleFinalButton.IsEnabled = false;
+        CompleteUndoButton.IsEnabled = false;
+        CompleteFinalizationButton.IsEnabled = false;
+        RecycleSourceButton.IsEnabled = false;
+        PromoteFinalButton.IsEnabled = false;
+        CheckFinalizationButton.IsEnabled = false;
+        FinalizationStatusText.Text = status;
+        FinalizationStatusText.Foreground = System.Windows.Media.Brushes.Black;
+    }
+
     private void CancelCopyButton_Click(object sender, RoutedEventArgs e)
     {
         if (!_copyInProgress || _copyCancellation is null)
@@ -851,22 +1096,26 @@ public partial class ReplacementReviewWindow : Window
 
     private void ReplacementReviewWindow_Closing(object? sender, CancelEventArgs e)
     {
-        if (!_copyInProgress && !_backupInProgress && !_promotionInProgress && !_sourceRecycleInProgress && !_completionInProgress)
+        if (!_copyInProgress && !_backupInProgress && !_promotionInProgress && !_sourceRecycleInProgress && !_completionInProgress && !_undoInProgress)
         {
             return;
         }
 
-        if (_promotionInProgress || _sourceRecycleInProgress || _completionInProgress)
+        if (_promotionInProgress || _sourceRecycleInProgress || _completionInProgress || _undoInProgress)
         {
             e.Cancel = true;
             System.Windows.MessageBox.Show(
                 this,
-                _completionInProgress
+                _undoInProgress
+                    ? "The undo transaction is being verified and cannot be cancelled safely. Wait for it to finish before closing."
+                    : _completionInProgress
                     ? "Finalisation completion is being recorded and cannot be cancelled safely. Wait for it to finish before closing."
                     : _sourceRecycleInProgress
                         ? "Source recycling is being verified and cannot be cancelled safely. Wait for it to finish before closing."
                         : "Atomic promotion is being verified and cannot be cancelled safely. Wait for it to finish before closing.",
-                _completionInProgress
+                _undoInProgress
+                    ? "Undo operation in progress"
+                    : _completionInProgress
                     ? "Finalisation completion in progress"
                     : _sourceRecycleInProgress ? "Source recycling in progress" : "Atomic promotion in progress",
                 MessageBoxButton.OK,

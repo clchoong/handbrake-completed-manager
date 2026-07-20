@@ -37,4 +37,4 @@ After atomic completion, the operation no longer appears in the incomplete Recov
 
 ## Remaining safety boundary
 
-The completed promoted final file and verified original backup remain untouched. Desktop undo preparation, source-restoration controls, final-file recycling, and undo completion are separate future actions.
+The completed promoted final file and verified original backup remain untouched until the user separately prepares [guarded replacement undo](undo-workflow.md). Undo restores and verifies the original source before the promoted final can be moved to the Windows Recycle Bin.

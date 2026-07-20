@@ -1,6 +1,6 @@
 # Verified source restoration
 
-Source restoration is the first executable undo step. It reconstructs a missing original source from the verified backup before any later action may touch the promoted final file. The service is implemented and safety-tested as a backend recovery boundary; it is not yet exposed in the desktop interface.
+Source restoration is the first executable file transition in desktop undo. It reconstructs a missing original source from the verified backup before any later action may touch the promoted final file.
 
 ## Preconditions
 
@@ -39,4 +39,4 @@ Failures after intent are written to the revisioned transaction journal. Recover
 
 ## Remaining safety boundary
 
-No desktop command currently starts undo or source restoration. Forward finalisation can now complete atomically, but undo preparation, final-file recycling, and undo completion remain disabled. The next milestone must expose restoration only as the first guarded undo action.
+The desktop exposes restoration only after explicit undo preparation. Once the source is restored and verified, the [guarded undo workflow](undo-workflow.md) may separately recycle the promoted final and atomically complete undo.

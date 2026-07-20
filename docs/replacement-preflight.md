@@ -12,11 +12,11 @@ Select a completed encode and choose **Review replacement**. The review displays
 - Original-backup path under `HandBrake Original Backup` in the source directory.
 - Every blocking issue and warning found from the current file-system state.
 
-When preflight passes, the window can create and verify a separate temporary file after explicit user confirmation. After that succeeds, a second confirmation can create and verify a separate original-backup copy. The window cannot move, rename, replace, or delete the source or converted file.
+When preflight passes, the window can create and verify a separate temporary file after explicit user confirmation. After that succeeds, a second confirmation can create and verify a separate original-backup copy. Preflight itself never moves, renames, replaces, or deletes the source or converted file; later transitions require their own integrity gates and confirmations.
 
 ## Blocking checks
 
-A future replacement cannot start when:
+Replacement preparation cannot start when:
 
 - The source or converted file is missing.
 - Either file is empty or its size cannot be read.
@@ -57,13 +57,6 @@ When the review is opened again, it displays the latest related operation. An in
 
 If a recorded temporary file exists, **Discard temporary file** provides an explicit recovery cleanup. The confirmation shows the exact path and states that deletion is permanent. Cleanup proceeds only when the operation still matches the reviewed encode and paths, remains the latest database state, is not completed, and the file can be opened exclusively. It never targets the source, converted output, final path, or backup path. After cleanup, preflight runs again and enables retry only if every current check passes.
 
-## Still disabled
+## Execution boundary
 
-Passing preflight does not enable source replacement. The following must be implemented and tested before any destructive transition is available:
-
-1. Atomic finalisation.
-2. Restart continuation decisions beyond cleanup/retry.
-3. Undo and restore-original behavior.
-4. Explicit final user confirmation.
-
-The mandatory rule remains: never remove or archive the source until the converted file has been copied to the source location and verified.
+Passing preflight authorizes only temporary-copy preparation. Original backup, readiness, promotion, source recycling, completion, and undo are separate guarded stages documented elsewhere. The mandatory rule remains: never remove or archive the source until the converted file has been copied to the source location and verified.

@@ -260,8 +260,13 @@ public sealed class SourceRestorationService(
 
     private static void ValidateOperation(ReplacementOperation operation, FinalizationTransaction transaction)
     {
+        var validOperationBoundary =
+            (operation.Status == ReplacementOperationStatus.Completed &&
+             operation.Stage == ReplacementOperationStage.Completed) ||
+            (operation.Status == ReplacementOperationStatus.InProgress &&
+             operation.Stage == ReplacementOperationStage.BackingUpSource);
         if (transaction.OperationId != operation.Id ||
-            operation.Status != ReplacementOperationStatus.InProgress ||
+            !validOperationBoundary ||
             operation.VerificationStatus != ReplacementVerificationStatus.Verified ||
             operation.BytesCopied != operation.DestinationSize)
         {

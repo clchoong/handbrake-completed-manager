@@ -50,6 +50,20 @@ public sealed record FinalizationCompletionResult(
     string FinalPath,
     bool WasAlreadyCompleted);
 
+public sealed record UndoPreparationResult(
+    Guid OperationId,
+    bool WasAlreadyPrepared);
+
+public sealed record FinalFileRecycleResult(
+    Guid OperationId,
+    string FinalPath,
+    bool WasRecovered);
+
+public sealed record UndoCompletionResult(
+    Guid OperationId,
+    string SourcePath,
+    bool WasAlreadyCompleted);
+
 public static class FinalizationStateMachine
 {
     private static readonly IReadOnlyDictionary<FinalizationCheckpoint, IReadOnlySet<FinalizationCheckpoint>> Transitions =

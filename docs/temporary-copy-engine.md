@@ -26,7 +26,7 @@ The durable operation is cancelled before the temporary file is deleted. If dele
 
 Database migration `003_replacement_retry_index.sql` no longer treats failed attempts as active operations. This permits a corrected retry when no partial artifact remains, while still preventing concurrent planned or in-progress operations for the same encode.
 
-Once a temporary copy is verified, the review window may proceed to the separate [original-backup preparation](original-backup.md) stage. Final source replacement remains disabled.
+Once a temporary copy is verified, the review window may proceed to the separate [original-backup preparation](original-backup.md) stage. The temporary-copy engine itself cannot perform any later file transition.
 
 ## Copy workflow
 
@@ -40,7 +40,7 @@ Before writing, the engine:
 
 The converted output is streamed in one-megabyte blocks. Byte progress is reported to the caller and periodically saved in SQLite. After the stream is flushed to disk, the engine verifies the temporary file's length and SHA-256 digest. It also checks that the converted file's size and modification time remained stable during the copy.
 
-Successful verification leaves the operation at the verified preparation boundary. Later milestones must implement original backup and atomic finalisation before replacement can complete.
+Successful verification leaves the operation at the verified preparation boundary. Original backup and every finalisation or undo transition remain separate services with their own validation and confirmation boundaries.
 
 ## Cancellation and failures
 

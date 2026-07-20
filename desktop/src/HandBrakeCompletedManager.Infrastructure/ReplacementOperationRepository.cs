@@ -103,13 +103,18 @@ public sealed class ReplacementOperationRepository(string databasePath)
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, completed_encode_id, status, stage,
-                   source_path, destination_path, final_path, temporary_path, backup_path,
-                   source_size, destination_size, bytes_copied, verification_status,
-                   failure_message, date_created_utc, date_updated_utc
-            FROM replacement_operations
-            WHERE status <> 'Completed'
-            ORDER BY date_updated_utc DESC;
+            SELECT operation.id, operation.completed_encode_id, operation.status, operation.stage,
+                   operation.source_path, operation.destination_path, operation.final_path,
+                   operation.temporary_path, operation.backup_path,
+                   operation.source_size, operation.destination_size, operation.bytes_copied,
+                   operation.verification_status, operation.failure_message,
+                   operation.date_created_utc, operation.date_updated_utc
+            FROM replacement_operations AS operation
+            LEFT JOIN finalization_transactions AS finalization
+                ON finalization.operation_id = operation.id
+            WHERE operation.status <> 'Completed'
+               OR finalization.checkpoint NOT IN ('Completed', 'Undone')
+            ORDER BY operation.date_updated_utc DESC;
             """;
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
