@@ -7,13 +7,14 @@ namespace HandBrakeCompletedManager.App;
 public partial class App : System.Windows.Application
 {
     private const string ApplicationId = "HandBrakeCompletedManager.App";
+    private const string SmokeInstanceIdEnvironmentVariable = "HBCM_SMOKE_INSTANCE_ID";
     private SingleInstanceCoordinator? _singleInstanceCoordinator;
     private bool _activationPending;
 
     private void App_Startup(object sender, StartupEventArgs e)
     {
         _singleInstanceCoordinator = new SingleInstanceCoordinator(
-            ApplicationId,
+            ResolveApplicationId(),
             () => Dispatcher.BeginInvoke(ActivateMainWindow));
         if (!_singleInstanceCoordinator.IsPrimaryInstance)
         {
@@ -29,6 +30,14 @@ public partial class App : System.Windows.Application
             _activationPending = false;
             window.ActivateFromExternalLaunch();
         }
+    }
+
+    private static string ResolveApplicationId()
+    {
+        var smokeInstanceId = Environment.GetEnvironmentVariable(SmokeInstanceIdEnvironmentVariable);
+        return string.IsNullOrWhiteSpace(smokeInstanceId)
+            ? ApplicationId
+            : $"{ApplicationId}.Smoke.{smokeInstanceId}";
     }
 
     private void ActivateMainWindow()

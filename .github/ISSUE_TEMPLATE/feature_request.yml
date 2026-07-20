@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement to completed-encode history or file management
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the workflow or pain point, rather than only the proposed control.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested behavior
+      description: Explain how the feature should work and what should happen when it fails.
+    validations:
+      required: true
+  - type: dropdown
+    id: files
+    attributes:
+      label: Does this feature modify files?
+      options:
+        - "No"
+        - "Yes — output files"
+        - "Yes — source files"
+        - "Unsure"
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety expectations
+      description: For file-changing features, describe confirmation, recovery, cancellation, and partial-failure expectations.

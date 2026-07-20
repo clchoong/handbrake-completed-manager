@@ -1,6 +1,6 @@
 # Publishing and independence
 
-> **Public-release status:** Hold. This is a technical licence review, not legal advice. The current architecture does not incorporate HandBrake code, but the repository licence and binary third-party notices described below must be completed before publication.
+> **Review status:** The source is prepared for publication under the MIT License. Binary publication requires the package verifier to confirm that all licence and third-party-notice files are present. This is a technical licence review, not legal advice.
 
 HandBrake Completed Manager is an independent companion application. It is not an official HandBrake product and is not affiliated with, endorsed by, sponsored by, or maintained by the HandBrake project.
 
@@ -18,11 +18,11 @@ The HandBrake name is used only to describe compatibility. Public repository and
 
 The companion uses an original coral, navy, and cream media/check icon. It must not use or imitate HandBrake's official pineapple-and-cocktail artwork, website presentation, or other project graphics.
 
-Using “HandBrake” descriptively to identify compatibility is different from presenting the companion as an official HandBrake release. The current name still carries an avoidable association risk. Before a public release, prefer a clearly descriptive name such as **Encode History Companion for HandBrake**, retain the independence notice, and avoid HandBrake artwork, logos, release-page styling, or an `official` claim. Obtain qualified legal advice before commercial distribution or if certainty about naming rights is required.
+Using “HandBrake” descriptively to identify compatibility is different from presenting the companion as an official HandBrake release. The name **HandBrake Completed Manager** is retained for product clarity, together with a prominent independence notice and original visual identity. Avoid HandBrake artwork, logos, release-page styling, or an `official` claim. Obtain qualified legal advice before commercial distribution or if certainty about naming rights is required.
 
 ## Repository licence decision
 
-Making a GitHub repository public does not by itself grant an open-source licence. This repository currently has no public project licence selected. Before inviting reuse, modification, redistribution, or external contributions, the owner should deliberately add a licence that matches the intended permissions. This choice is independent of HandBrake's GPLv2 unless the project later incorporates GPL-covered material.
+The project's original source code is published under the MIT License. This choice is independent of HandBrake's GPLv2 because the companion does not incorporate or link HandBrake code. Third-party components remain governed by their respective licences.
 
 ## Bundled dependency review
 
@@ -32,7 +32,7 @@ The current Windows application resolves these distributable dependency families
 - `SQLitePCLRaw` 2.1.12 — Apache License 2.0
 - SQLite native library — public domain
 
-The self-contained single-file package includes the .NET runtime and SQLite components even though their individual DLLs are not visible beside the executable. The current 0.3.1 archive contains no third-party licence or notice file, so it is not the approved public-distribution artifact. A later package must include the applicable MIT and Apache 2.0 texts, copyright notices, and .NET third-party notices, then pass archive-content verification.
+The self-contained single-file package includes the .NET runtime and SQLite components even though their individual DLLs are not visible beside the executable. Public packages must include the project MIT licence, applicable MIT and Apache 2.0 texts, copyright notices, and .NET third-party notices, then pass archive-content verification.
 
 ## Sources reviewed
 
@@ -48,8 +48,7 @@ The self-contained single-file package includes the .NET runtime and SQLite comp
 - Keep the independent-project notice near the top of the README and release descriptions.
 - Link users to `https://handbrake.fr/` for the official HandBrake application.
 - Do not bundle HandBrake installers, binaries, source code, documentation, or artwork.
-- Choose and add this project's own licence before describing the repository as open source.
 - Include and verify all required third-party licence and notice files in the binary package.
-- Prefer a more clearly descriptive public product/repository name and repeat the independence notice on the release page.
+- Repeat the independent-project notice prominently on the repository and release page.
 - Publish checksums and clearly identify unsigned binaries so users understand Windows reputation warnings.
 - Review the relationship and licences again before adding deeper integration or third-party components.

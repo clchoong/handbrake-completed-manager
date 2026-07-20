@@ -14,7 +14,7 @@ the executables for its history database, settings, connections, and logs.
 
 Connect HandBrake
 -----------------
-Open HandBrake Completed Manager and expand "Configure completed-encode capture".
+Open HandBrake Completed Manager and expand "Completion capture setup".
 Copy the displayed receiver path and arguments into HandBrake under:
 
 Tools > Preferences > When Done > Encode Completed > Send File To

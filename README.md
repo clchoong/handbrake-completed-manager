@@ -1,5 +1,8 @@
 # HandBrake Completed Manager
 
+[![CI](https://github.com/clchoong/handbrake-completed-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/clchoong/handbrake-completed-manager/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 HandBrake's Queue is useful while an encode is in progress, but it is not a permanent source-to-output library. After completed entries are cleared or the window is closed, reconnecting a converted file with its original source can become a manual search across folders and drives.
 
 HandBrake Completed Manager is a portable Windows companion that records each completed encode as it finishes. It keeps the source path, output path, file sizes, completion time, and replacement state available for later review, then provides safety-focused actions for locating files, rejecting an unsatisfactory output, or replacing a verified source.
@@ -7,6 +10,10 @@ HandBrake Completed Manager is a portable Windows companion that records each co
 It is intentionally a completed-encode history and file-management application—not a HandBrake queue viewer or queue-recovery tool.
 
 > **Independent third-party project:** This project is not affiliated with, endorsed by, or maintained by the HandBrake project. “HandBrake” is used only to identify compatibility with the official [HandBrake](https://handbrake.fr/) application. No HandBrake source code, binaries, or graphic assets are included.
+
+## Licence
+
+The project's original source code is available under the [MIT License](LICENSE). Distributed builds also include the applicable .NET, Microsoft.Data.Sqlite, SQLitePCLRaw, and SQLite notices. HandBrake is separate software governed by [its own licence](https://github.com/HandBrake/HandBrake/blob/master/LICENSE).
 
 ## Platform
 

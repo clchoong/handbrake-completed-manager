@@ -4,7 +4,7 @@ param(
     [string]$RuntimeIdentifier = "win-x64",
 
     [ValidatePattern("^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.1.0",
+    [string]$Version = "0.4.0",
 
     [string]$ArtifactsDirectory
 )
@@ -63,6 +63,16 @@ Copy-Item -LiteralPath (Join-Path $appPublishDirectory "HandBrakeCompletedManage
 Copy-Item -LiteralPath (Join-Path $receiverPublishDirectory "HandBrakeCompletedManager.Receiver.exe") -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "packaging\portable.mode") -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "packaging\PORTABLE-README.txt") -Destination $packageDirectory
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "LICENSE") -Destination (Join-Path $packageDirectory "LICENSE.txt")
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "packaging\THIRD-PARTY-NOTICES.txt") -Destination $packageDirectory
+
+$dotnetExecutable = (Get-Command dotnet -ErrorAction Stop).Source
+$dotnetNoticesPath = Join-Path (Split-Path -Parent $dotnetExecutable) "ThirdPartyNotices.txt"
+if (-not (Test-Path -LiteralPath $dotnetNoticesPath -PathType Leaf)) {
+    throw "The .NET distribution third-party notices were not found beside dotnet: $dotnetNoticesPath"
+}
+
+Copy-Item -LiteralPath $dotnetNoticesPath -Destination (Join-Path $packageDirectory "DOTNET-THIRD-PARTY-NOTICES.txt")
 
 & (Join-Path $PSScriptRoot "verify-portable-package.ps1") -PackageDirectory $packageDirectory
 if ($LASTEXITCODE -ne 0) {

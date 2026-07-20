@@ -1,6 +1,6 @@
 # Release readiness
 
-Version 0.3.1 was validated as a self-contained Windows x64 release candidate on 20 July 2026.
+Version 0.4.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
@@ -13,13 +13,16 @@ Version 0.3.1 was validated as a self-contained Windows x64 release candidate on
 - Archive inspection found only the desktop executable, receiver executable, portable marker, and portable guide.
 - The WPF build embeds the high-contrast original application icon in the executable and uses it consistently in the dashboard and notification area.
 - A real two-launch process check confirmed that the secondary process exits while the primary process remains and receives the activation signal.
+- The history grid hands mouse-wheel input back to the page when its own scroll range reaches a boundary.
+- Package verification requires the project MIT licence, direct dependency notices, and .NET distribution third-party notices.
+- The archive contains no generated history, settings, logs, private developer metadata, or local paths outside the portable guide's generic examples.
 - Output-recycling tests cover captured-file verification, unfinished-replacement refusal, Recycle Bin failure, source retention, and retained history.
 - Replacement-state tests verify the terminal **Replaced** and **Restored** indicators from durable finalisation checkpoints.
 
-The validated archive is `HandBrake-Completed-Manager-0.3.1-win-x64.zip`. Its size is 116,158,444 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.4.0-win-x64.zip`. Its size is 116,175,330 bytes and its SHA-256 checksum is:
 
 ```text
-B9E6EDC615B1E92D4781A13E9CC64FCBB420B905AFE2051F0B4D283F754E88CF
+536872C6F1B6C4957117567351176813BC4DBAE6CE62DBAE57D533ADE865A854
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -41,7 +44,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.3.1
+.\scripts\publish-portable.ps1 -Version 0.4.0
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

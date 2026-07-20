@@ -19,15 +19,18 @@ artifacts\portable\win-x64\
 ├── HandBrake Completed Manager\
 │   ├── HandBrakeCompletedManager.exe
 │   ├── HandBrakeCompletedManager.Receiver.exe
+│   ├── LICENSE.txt
+│   ├── THIRD-PARTY-NOTICES.txt
+│   ├── DOTNET-THIRD-PARTY-NOTICES.txt
 │   ├── portable.mode
 │   └── PORTABLE-README.txt
-└── HandBrake-Completed-Manager-0.1.0-win-x64.zip
+└── HandBrake-Completed-Manager-0.4.0-win-x64.zip
 ```
 
 Build output under `artifacts` is intentionally excluded from source control. A different semantic version can be selected explicitly:
 
 ```powershell
-.\scripts\publish-portable.ps1 -Version 0.1.1
+.\scripts\publish-portable.ps1 -Version 0.4.0
 ```
 
 The first verified release target is Windows x64. Other architectures should be added only with architecture-appropriate package execution tests.
@@ -40,6 +43,9 @@ The `portable.mode` marker makes both executables use the same `data` directory 
 HandBrake Completed Manager\
 ├── HandBrakeCompletedManager.exe
 ├── HandBrakeCompletedManager.Receiver.exe
+├── LICENSE.txt
+├── THIRD-PARTY-NOTICES.txt
+├── DOTNET-THIRD-PARTY-NOTICES.txt
 ├── portable.mode
 └── data\
     ├── history.db

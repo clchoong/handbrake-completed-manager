@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem in HandBrake Completed Manager
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting a problem. Remove private paths, filenames, and media before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: Application version
+      placeholder: e.g. 0.4.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 24H2 or Windows 10 LTSC 2021
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Explain the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Click ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant diagnostic information
+      description: Paste only information you have reviewed and sanitized. Never upload private media or a real history database.
+      render: text
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed private paths, filenames, credentials, and personal media from this report.
+          required: true

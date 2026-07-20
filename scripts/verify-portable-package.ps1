@@ -11,15 +11,39 @@ $packageRoot = [System.IO.Path]::GetFullPath($PackageDirectory)
 $appPath = Join-Path $packageRoot "HandBrakeCompletedManager.exe"
 $receiverPath = Join-Path $packageRoot "HandBrakeCompletedManager.Receiver.exe"
 $markerPath = Join-Path $packageRoot "portable.mode"
+$projectLicensePath = Join-Path $packageRoot "LICENSE.txt"
+$thirdPartyNoticesPath = Join-Path $packageRoot "THIRD-PARTY-NOTICES.txt"
+$dotnetNoticesPath = Join-Path $packageRoot "DOTNET-THIRD-PARTY-NOTICES.txt"
 $dataDirectory = Join-Path $packageRoot "data"
 $smokeDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("hbcm-portable-smoke-" + [Guid]::NewGuid().ToString("N"))
 $appProcess = $null
 $ownsDataDirectory = $false
+$originalSmokeInstanceId = $env:HBCM_SMOKE_INSTANCE_ID
 
-foreach ($requiredPath in @($appPath, $receiverPath, $markerPath)) {
+foreach ($requiredPath in @(
+    $appPath,
+    $receiverPath,
+    $markerPath,
+    $projectLicensePath,
+    $thirdPartyNoticesPath,
+    $dotnetNoticesPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required package file is missing: $requiredPath"
     }
+}
+
+if (-not (Select-String -LiteralPath $projectLicensePath -SimpleMatch "MIT License" -Quiet)) {
+    throw "The package project licence is not the expected MIT licence."
+}
+
+foreach ($requiredNotice in @("Microsoft.Data.Sqlite", "SQLitePCLRaw", "Apache License")) {
+    if (-not (Select-String -LiteralPath $thirdPartyNoticesPath -SimpleMatch $requiredNotice -Quiet)) {
+        throw "The package third-party notices are incomplete: missing $requiredNotice."
+    }
+}
+
+if ((Get-Item -LiteralPath $dotnetNoticesPath).Length -lt 10KB) {
+    throw "The packaged .NET third-party notice file appears incomplete."
 }
 
 foreach ($executablePath in @($appPath, $receiverPath)) {
@@ -67,6 +91,7 @@ try {
         HistoryRefreshSeconds = 3
     } | ConvertTo-Json | Set-Content -LiteralPath $settingsPath -Encoding UTF8
 
+    $env:HBCM_SMOKE_INSTANCE_ID = [Guid]::NewGuid().ToString("N")
     $appProcess = Start-Process -FilePath $appPath -WorkingDirectory $packageRoot -WindowStyle Hidden -PassThru
     $desktopLogFound = $false
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -90,6 +115,8 @@ try {
     }
 }
 finally {
+    $env:HBCM_SMOKE_INSTANCE_ID = $originalSmokeInstanceId
+
     if ($null -ne $appProcess) {
         $appProcess.Refresh()
         if (-not $appProcess.HasExited) {
