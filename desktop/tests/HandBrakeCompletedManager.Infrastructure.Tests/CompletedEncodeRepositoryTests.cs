@@ -7,7 +7,7 @@ namespace HandBrakeCompletedManager.Infrastructure.Tests;
 public sealed class CompletedEncodeRepositoryTests
 {
     [Fact]
-    public async Task InitializeAsync_UpgradesExistingReplacementSchemaWithRetryIndex()
+    public async Task InitializeAsync_UpgradesExistingReplacementSchemaThroughFinalizationJournal()
     {
         var testDirectory = Path.Combine(
             Path.GetTempPath(),
@@ -46,6 +46,12 @@ public sealed class CompletedEncodeRepositoryTests
                 SELECT COUNT(*)
                 FROM sqlite_master
                 WHERE type = 'table' AND name = 'replacement_operations';
+                """;
+            Assert.Equal(1L, await verificationCommand.ExecuteScalarAsync());
+            verificationCommand.CommandText = """
+                SELECT COUNT(*)
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'finalization_transactions';
                 """;
             Assert.Equal(1L, await verificationCommand.ExecuteScalarAsync());
             verificationCommand.CommandText = """

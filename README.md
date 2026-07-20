@@ -23,6 +23,7 @@ desktop/
   tests/
     HandBrakeCompletedManager.Core.Tests/       Unit tests
     HandBrakeCompletedManager.Infrastructure.Tests/ Integration tests
+    HandBrakeCompletedManager.Finalization.Tests/ Transaction-journal and crash-recovery tests
 database/
   migrations/                                   SQLite migrations
 docs/
@@ -79,6 +80,7 @@ The current Phase 1 implementation provides:
 - Verified or partial backup artifacts can be explicitly discarded through the same exact-path, stale-state, and active-lock safety boundaries.
 - A read-only finalisation readiness review revalidates persisted state, exact paths, sizes, SHA-256 equality, file stability, and final-path availability without changing any file.
 - A restart-recovery overview inventories incomplete replacement operations and suggests the next safe review action; it does not perform recovery automatically.
+- Successful readiness review can persist a revisioned `Prepared` transaction journal containing the verified source and final-file digests. Legal finalisation and undo checkpoints are defined and crash recovery can inspect artifacts read-only, but no file-transition executor is enabled.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -94,4 +96,5 @@ The current Phase 1 implementation provides:
 - [Verified temporary copy](docs/temporary-copy-engine.md): streamed copy, progress, cancellation, verification, and retained recovery artifacts
 - [Original-backup preparation](docs/original-backup.md): non-destructive source backup, verification, cancellation, cleanup, and current safety boundary
 - [Finalisation readiness and restart recovery](docs/finalization-readiness.md): read-only integrity gate, recovery classifications, and disabled mutation boundary
+- [Finalisation transaction design](docs/finalization-transaction-design.md): durable checkpoints, forward/undo ordering, crash decisions, and execution boundary
 

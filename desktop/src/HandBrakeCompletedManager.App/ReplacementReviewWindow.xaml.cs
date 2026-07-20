@@ -16,9 +16,12 @@ public partial class ReplacementReviewWindow : Window
     private readonly OriginalBackupService _originalBackupService;
     private readonly OriginalBackupCleanupService _originalBackupCleanupService;
     private readonly FinalizationReadinessService _finalizationReadinessService;
+    private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
+    private readonly FinalizationPreparationService _finalizationPreparationService;
     private readonly ReplacementPreflightService _preflightService = new();
     private ReplacementOperation? _recoveryOperation;
     private OriginalBackupState? _backupState;
+    private FinalizationTransaction? _finalizationTransaction;
     private CancellationTokenSource? _copyCancellation;
     private CancellationTokenSource? _backupCancellation;
     private bool _copyInProgress;
@@ -33,7 +36,9 @@ public partial class ReplacementReviewWindow : Window
         OriginalBackupRepository backupRepository,
         OriginalBackupService originalBackupService,
         OriginalBackupCleanupService originalBackupCleanupService,
-        FinalizationReadinessService finalizationReadinessService)
+        FinalizationReadinessService finalizationReadinessService,
+        FinalizationTransactionRepository finalizationTransactionRepository,
+        FinalizationPreparationService finalizationPreparationService)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
@@ -43,6 +48,8 @@ public partial class ReplacementReviewWindow : Window
         ArgumentNullException.ThrowIfNull(originalBackupService);
         ArgumentNullException.ThrowIfNull(originalBackupCleanupService);
         ArgumentNullException.ThrowIfNull(finalizationReadinessService);
+        ArgumentNullException.ThrowIfNull(finalizationTransactionRepository);
+        ArgumentNullException.ThrowIfNull(finalizationPreparationService);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
         _temporaryCopyCleanupService = temporaryCopyCleanupService;
@@ -51,6 +58,8 @@ public partial class ReplacementReviewWindow : Window
         _originalBackupService = originalBackupService;
         _originalBackupCleanupService = originalBackupCleanupService;
         _finalizationReadinessService = finalizationReadinessService;
+        _finalizationTransactionRepository = finalizationTransactionRepository;
+        _finalizationPreparationService = finalizationPreparationService;
         InitializeComponent();
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
@@ -106,6 +115,7 @@ public partial class ReplacementReviewWindow : Window
             var canPrepare = _plan.CanProceed;
             _recoveryOperation = null;
             _backupState = null;
+            _finalizationTransaction = null;
             DiscardTemporaryButton.IsEnabled = false;
             CreateBackupButton.IsEnabled = false;
             DiscardBackupButton.IsEnabled = false;
@@ -136,7 +146,12 @@ public partial class ReplacementReviewWindow : Window
                 }
 
                 _backupState = await _backupRepository.GetAsync(operation.Id);
-                ApplyBackupState(operation, _backupState);
+                _finalizationTransaction = await _finalizationTransactionRepository.GetAsync(operation.Id);
+                if (_finalizationTransaction is not null)
+                {
+                    DiscardTemporaryButton.IsEnabled = false;
+                }
+                ApplyBackupState(operation, _backupState, _finalizationTransaction);
             }
 
             PrepareCopyButton.IsEnabled = canPrepare && !_copyInProgress && !_backupInProgress;
@@ -165,7 +180,8 @@ public partial class ReplacementReviewWindow : Window
 
     private void ApplyBackupState(
         ReplacementOperation operation,
-        OriginalBackupState? backup)
+        OriginalBackupState? backup,
+        FinalizationTransaction? finalizationTransaction)
     {
         var verifiedTemporary =
             operation.Status == ReplacementOperationStatus.InProgress &&
@@ -211,6 +227,7 @@ public partial class ReplacementReviewWindow : Window
             !_backupInProgress;
         DiscardBackupButton.IsEnabled =
             backupFileExists &&
+            finalizationTransaction is null &&
             !_copyInProgress &&
             !_backupInProgress;
         CheckFinalizationButton.IsEnabled =
@@ -220,9 +237,11 @@ public partial class ReplacementReviewWindow : Window
             operation.Stage == ReplacementOperationStage.BackingUpSource &&
             !_copyInProgress &&
             !_backupInProgress;
-        FinalizationStatusText.Text = CheckFinalizationButton.IsEnabled
-            ? "Both artifacts are verified. Run the read-only readiness check before any finalisation design is enabled."
-            : "Finalisation remains disabled until verified temporary and original-backup artifacts are both present.";
+        FinalizationStatusText.Text = finalizationTransaction is not null
+            ? $"Transaction checkpoint: {finalizationTransaction.Checkpoint} (revision {finalizationTransaction.Revision}). File execution and undo remain disabled."
+            : CheckFinalizationButton.IsEnabled
+                ? "Both artifacts are verified. Run the file-read-only readiness check to prepare a durable transaction design."
+                : "Finalisation remains disabled until verified temporary and original-backup artifacts are both present.";
     }
 
     private async void PrepareCopyButton_Click(object sender, RoutedEventArgs e)
@@ -537,8 +556,16 @@ public partial class ReplacementReviewWindow : Window
                 _plan,
                 _recoveryOperation,
                 _backupState);
+            _finalizationTransaction = readiness.IsReady
+                ? await _finalizationPreparationService.PrepareAsync(_recoveryOperation, readiness)
+                : null;
+            if (_finalizationTransaction is not null)
+            {
+                DiscardTemporaryButton.IsEnabled = false;
+                DiscardBackupButton.IsEnabled = false;
+            }
             FinalizationStatusText.Text = readiness.IsReady
-                ? "READY FOR DESIGN REVIEW — both file pairs match and the final path is clear. No finalisation action is enabled."
+                ? $"READY — transaction checkpoint {_finalizationTransaction!.Checkpoint} was persisted. File execution and undo remain disabled."
                 : "BLOCKED — " + string.Join(" ", readiness.Issues.Select(issue => issue.Message));
             FinalizationStatusText.Foreground = readiness.IsReady
                 ? System.Windows.Media.Brushes.DarkGreen

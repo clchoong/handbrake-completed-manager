@@ -27,6 +27,8 @@ public partial class MainWindow : Window
     private readonly OriginalBackupService _originalBackupService;
     private readonly OriginalBackupCleanupService _originalBackupCleanupService;
     private readonly FinalizationReadinessService _finalizationReadinessService = new();
+    private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
+    private readonly FinalizationPreparationService _finalizationPreparationService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
@@ -64,6 +66,8 @@ public partial class MainWindow : Window
         _replacementRecoveryService = new ReplacementRecoveryService(
             _replacementOperationRepository,
             _originalBackupRepository);
+        _finalizationTransactionRepository = new FinalizationTransactionRepository(_databasePath);
+        _finalizationPreparationService = new FinalizationPreparationService(_finalizationTransactionRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -571,7 +575,9 @@ public partial class MainWindow : Window
                 _originalBackupRepository,
                 _originalBackupService,
                 _originalBackupCleanupService,
-                _finalizationReadinessService)
+                _finalizationReadinessService,
+                _finalizationTransactionRepository,
+                _finalizationPreparationService)
             {
                 Owner = this
             };

@@ -275,7 +275,7 @@ Add a **Replace Source** button.
 
 Purpose:
 
-Move the converted file into the source file’s original location and remove or archive the original source.
+Create a verified converted file beside the original source, retain a verified backup, and only then recycle or archive the original source through a recoverable transaction.
 
 Example:
 
@@ -312,10 +312,12 @@ The replacement operation is destructive, so use a safe process.
 8. Copy the converted file to a temporary filename in the source location.
 9. Show live transfer progress.
 10. Verify the completed copy.
-11. Move the original source into a temporary backup folder.
-12. Rename the copied converted file to its final name.
-13. Mark the record as Source Replaced.
-14. Retain enough information to undo the replacement.
+11. Copy and verify the original source in its backup folder.
+12. Persist promotion intent, then atomically rename the copied converted file to its final name.
+13. Verify the promoted final file while the original source remains present.
+14. After separate confirmation, persist removal intent and recycle or archive the original source.
+15. Mark the record as Source Replaced.
+16. Retain a revisioned transaction journal and enough verified information to undo the replacement.
 
 Never delete the source before the converted file has been copied and verified.
 

@@ -8,6 +8,7 @@ This directory contains the versioned SQLite schema used by HandBrake Completed 
 - `002_replacement_operations.sql` adds persistent replacement stages, paths, byte progress, verification state, and failure details for safe interruption recovery.
 - `003_replacement_retry_index.sql` allows a corrected retry after a failed attempt while continuing to prevent concurrent planned or in-progress operations for the same encode.
 - `004_original_backups.sql` stores independent original-backup progress, verification hashes, failures, cancellation, and recovery timestamps.
+- `005_finalization_transactions.sql` stores immutable preparation digests, intent/completion checkpoints, optimistic revisions, and failure details for transactional finalisation and undo recovery.
 
 The Infrastructure project embeds all migrations as assembly resources. `CompletedEncodeRepository.InitializeAsync` applies them in order and idempotently when the history database is opened.
 

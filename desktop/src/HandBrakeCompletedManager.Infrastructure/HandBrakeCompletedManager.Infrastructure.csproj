@@ -28,6 +28,9 @@
     <EmbeddedResource Include="..\..\..\database\migrations\004_original_backups.sql"
                       Link="Migrations\004_original_backups.sql"
                       LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.004_original_backups.sql" />
+    <EmbeddedResource Include="..\..\..\database\migrations\005_finalization_transactions.sql"
+                      Link="Migrations\005_finalization_transactions.sql"
+                      LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.005_finalization_transactions.sql" />
   </ItemGroup>
 
 </Project>

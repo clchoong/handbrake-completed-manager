@@ -35,4 +35,6 @@ Operations whose artifacts were explicitly discarded and whose cancellation stat
 
 ## Current safety boundary
 
-Finalisation remains disabled. The application has no command that promotes the temporary copy, moves the source, completes a replacement, restores a backup, or performs undo. Those transitions require a transactional state design, crash-boundary recovery rules, explicit confirmation, and dedicated failure-injection tests before implementation.
+When the integrity review passes, the application can persist a `Prepared` transaction journal containing the verified source and final-file SHA-256 digests. This changes only the local SQLite database and still does not authorize a file transition.
+
+Finalisation remains disabled. The application has no command that promotes the temporary copy, recycles the source, completes a replacement, restores a backup, or performs undo. The checkpoint design and crash-boundary recovery rules are documented in [Finalisation transaction design](finalization-transaction-design.md); each filesystem executor still requires separate implementation, confirmation, and failure testing before it can be enabled.

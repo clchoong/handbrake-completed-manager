@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandBrakeCompletedManager.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandBrakeCompletedManager.Infrastructure.Tests", "tests\HandBrakeCompletedManager.Infrastructure.Tests\HandBrakeCompletedManager.Infrastructure.Tests.csproj", "{A7D14A26-0A4B-4599-A967-55009215584F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandBrakeCompletedManager.Finalization.Tests", "tests\HandBrakeCompletedManager.Finalization.Tests\HandBrakeCompletedManager.Finalization.Tests.csproj", "{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{A7D14A26-0A4B-4599-A967-55009215584F}.Release|x64.Build.0 = Release|Any CPU
 		{A7D14A26-0A4B-4599-A967-55009215584F}.Release|x86.ActiveCfg = Release|Any CPU
 		{A7D14A26-0A4B-4599-A967-55009215584F}.Release|x86.Build.0 = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|x64.Build.0 = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Debug|x86.Build.0 = Debug|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|x64.ActiveCfg = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|x64.Build.0 = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|x86.ActiveCfg = Release|Any CPU
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,5 +126,6 @@ Global
 		{D6E02383-0930-4F0F-9E44-DA0FDE7312A3} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{DBB62A34-E795-41AC-ADD4-905C5C8EC7BD} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{A7D14A26-0A4B-4599-A967-55009215584F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{48F87A19-B93C-49DC-A3B4-D7E8A1169E21} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
