@@ -1,6 +1,10 @@
 # HandBrake Completed Manager
 
-HandBrake Completed Manager is a portable Windows companion application that maintains a durable history of completed HandBrake encodes and provides safety-focused file-management workflows.
+HandBrake's Queue is useful while an encode is in progress, but it is not a permanent source-to-output library. After completed entries are cleared or the window is closed, reconnecting a converted file with its original source can become a manual search across folders and drives.
+
+HandBrake Completed Manager is a portable Windows companion that records each completed encode as it finishes. It keeps the source path, output path, file sizes, completion time, and replacement state available for later review, then provides safety-focused actions for locating files, rejecting an unsatisfactory output, or replacing a verified source.
+
+It is intentionally a completed-encode history and file-management application—not a HandBrake queue viewer or queue-recovery tool.
 
 > **Independent third-party project:** This project is not affiliated with, endorsed by, or maintained by the HandBrake project. “HandBrake” is used only to identify compatibility with the official [HandBrake](https://handbrake.fr/) application. No HandBrake source code, binaries, or graphic assets are included.
 

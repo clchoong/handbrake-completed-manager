@@ -2,9 +2,9 @@
 
 ## Product overview
 
-HandBrake Completed Manager is a Windows companion application that maintains a durable record of completed HandBrake encoding tasks. Its history remains available after completed tasks are cleared or removed from HandBrake's Queue.
+HandBrake Completed Manager is a Windows companion application that maintains a durable record of completed HandBrake encoding tasks. When HandBrake's completed entries are cleared or its window is closed, users may otherwise need to search folders and drives to reconnect an output with its original source. The companion preserves that source-to-output relationship as each encode finishes.
 
-The product is a dedicated completed-encode history and file-management application. Queue recovery and restoration of HandBrake's internal queue are outside its scope.
+The product is a dedicated completed-encode history and file-management application. Mirroring pending or running HandBrake tasks, queue recovery, and restoration of HandBrake's internal queue are outside its scope. HandBrake remains the authoritative interface for active encoding work.
 
 ## Problem statement
 
@@ -493,14 +493,14 @@ For replaced records, display:
 
 ## Bulk actions
 
-Allow selecting multiple records.
+Allow selecting multiple records in a deliberate bulk-management mode. Single-record selection remains the default so that ordinary playback, reveal, and replacement actions are unambiguous.
 
 Bulk actions:
 
 * Replace selected sources
 * Verify selected outputs
 * Remove selected records from history
-* Delete selected converted files
+* Recycle selected converted files through the Windows Recycle Bin
 * Move selected outputs
 * Export selected records
 * Add tags
@@ -514,6 +514,10 @@ If one replacement fails:
 * Show a final summary
 
 Do not run many destructive file replacements simultaneously by default.
+
+Bulk output recycling must verify every selected record before changing files, present the exact affected paths and eligibility failures, require one explicit confirmation, and report a per-item result. It must never fall back to permanent deletion.
+
+Bulk source replacement is a separate managed workflow rather than a loop around the single-record dialog. It requires sequential execution, durable per-record progress, cancellation between records, restart recovery, and a final succeeded/skipped/failed summary.
 
 ## Duplicate and conflict detection
 

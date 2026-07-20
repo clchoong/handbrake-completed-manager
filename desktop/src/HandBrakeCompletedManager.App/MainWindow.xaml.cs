@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using HandBrakeCompletedManager.Core;
 using HandBrakeCompletedManager.Infrastructure;
@@ -532,6 +533,44 @@ public partial class MainWindow : Window
             ? "Select a completed encode"
             : $"Selected: {row.DestinationFilename}";
         UpdateDetailsPanel(row);
+    }
+
+    private void HistoryGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var gridScroller = FindVisualChild<ScrollViewer>(HistoryGrid);
+        var gridCanScroll = gridScroller is not null &&
+            (e.Delta < 0
+                ? gridScroller.VerticalOffset < gridScroller.ScrollableHeight
+                : gridScroller.VerticalOffset > 0);
+
+        if (gridCanScroll)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        PageScrollViewer.ScrollToVerticalOffset(PageScrollViewer.VerticalOffset - e.Delta);
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+            {
+                return match;
+            }
+
+            var descendant = FindVisualChild<T>(child);
+            if (descendant is not null)
+            {
+                return descendant;
+            }
+        }
+
+        return null;
     }
 
     private void HistorySearchTextBox_TextChanged(object sender, TextChangedEventArgs e) =>

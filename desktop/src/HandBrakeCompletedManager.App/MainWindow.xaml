@@ -33,7 +33,7 @@
                                Text="HandBrake Completed Manager" />
                     <TextBlock Margin="0,3,0,0"
                                Foreground="#AEB9CA"
-                               Text="Your verified encode history and safe replacement workspace" />
+                               Text="Permanent source-to-output history after HandBrake finishes" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
                     <Button x:Name="RecoveryButton"
@@ -62,7 +62,8 @@
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1"
+        <ScrollViewer x:Name="PageScrollViewer"
+                      Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <Grid Margin="28,24,28,20">
@@ -324,6 +325,7 @@
                                   CanUserAddRows="False"
                                   SelectionMode="Single"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
+                                  PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
