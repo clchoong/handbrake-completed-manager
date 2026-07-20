@@ -1,6 +1,6 @@
 # Release readiness
 
-Version 0.1.1 was validated as a self-contained Windows x64 release candidate on 20 July 2026.
+Version 0.2.0 was validated as a self-contained Windows x64 release candidate on 20 July 2026.
 
 ## Validation result
 
@@ -11,11 +11,12 @@ Version 0.1.1 was validated as a self-contained Windows x64 release candidate on
 - The packaged desktop application started and initialized successfully.
 - Package verification removed all generated history, settings, logs, and temporary media before distribution.
 - Archive inspection found only the desktop executable, receiver executable, portable marker, and portable guide.
+- The redesigned WPF application passed live Windows UI Automation checks for control loading, on-screen bounds, minimum-width wrapping, and accessible names on its primary search, filter, connection, and safe-replacement inputs.
 
-The validated archive is `HandBrake-Completed-Manager-0.1.1-win-x64.zip`. Its size is 115,732,537 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.2.0-win-x64.zip`. Its size is 115,741,219 bytes and its SHA-256 checksum is:
 
 ```text
-5322E59118D5979F4CA2D752142CFE75274C03CC89E25A17FDB2C90E4BC66CAF
+DF1AE61169EF1F8E63B56665BE392251432A66A13B0F790BD56C02B0E86A5412
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -36,7 +37,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.1.1
+.\scripts\publish-portable.ps1 -Version 0.2.0
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

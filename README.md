@@ -84,6 +84,7 @@ The current Phase 1 implementation provides:
 - After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
 - The desktop undo workflow explicitly prepares undo, reconstructs the source through a resumable verified artifact, recycles the promoted final only after source verification, and atomically restores source availability in history.
 - After reviewing all planned paths, **Replace source safely** runs temporary-copy verification, original-backup verification, atomic promotion, Windows Recycle Bin source retirement, and atomic completion from one path-specific confirmation, with live progress and durable recovery checkpoints.
+- A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, a focused one-click replacement experience, and collapsed advanced recovery controls across Windows 10 and Windows 11.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
@@ -99,6 +100,7 @@ The current Phase 1 implementation provides:
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
 - [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior
+- [Desktop UI design](docs/desktop-ui-design.md): visual system, information hierarchy, replacement experience, accessibility, and scaling behavior
 - [Replacement safety preflight](docs/replacement-preflight.md): review checks, planned paths, persistent recovery state, and disabled execution boundaries
 - [Verified temporary copy](docs/temporary-copy-engine.md): streamed copy, progress, cancellation, verification, and retained recovery artifacts
 - [Original-backup preparation](docs/original-backup.md): non-destructive source backup, verification, cancellation, cleanup, and current safety boundary

@@ -767,7 +767,7 @@ Show practical error messages with recovery actions.
 
 ## User interface
 
-Use a clean Windows desktop interface.
+Use a refined native Windows desktop interface with a consistent visual system, clear hierarchy, semantic status colors, responsive layouts, and progressive disclosure for advanced recovery controls.
 
 Suggested layout:
 
