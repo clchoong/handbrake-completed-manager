@@ -2,6 +2,8 @@
 
 HandBrake Completed Manager is a portable Windows companion application that maintains a durable history of completed HandBrake encodes and provides safety-focused file-management workflows.
 
+> **Independent third-party project:** This project is not affiliated with, endorsed by, or maintained by the HandBrake project. “HandBrake” is used only to identify compatibility with the official [HandBrake](https://handbrake.fr/) application. No HandBrake source code, binaries, or graphic assets are included.
+
 ## Platform
 
 - Windows 10 version 1809 (build 17763) or later
@@ -68,6 +70,7 @@ The current Phase 1 implementation provides:
 - **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
+- A session-wide single-instance guard prevents duplicate tray icons; launching another copy restores the already-running window and exits the new process.
 - Local settings control startup visibility, close-to-tray, tray guidance, and history refresh interval.
 - Non-fatal daily diagnostic logs cover desktop and receiver operational events.
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
@@ -101,6 +104,7 @@ The current Phase 1 implementation provides:
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
 - [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior
 - [Desktop UI design](docs/desktop-ui-design.md): visual system, information hierarchy, replacement experience, accessibility, and scaling behavior
+- [Publishing and independence](docs/publishing-and-independence.md): HandBrake relationship, GPL boundary, branding, and repository licensing decisions
 - [Replacement safety preflight](docs/replacement-preflight.md): review checks, planned paths, persistent recovery state, and disabled execution boundaries
 - [Verified temporary copy](docs/temporary-copy-engine.md): streamed copy, progress, cancellation, verification, and retained recovery artifacts
 - [Original-backup preparation](docs/original-backup.md): non-destructive source backup, verification, cancellation, cleanup, and current safety boundary

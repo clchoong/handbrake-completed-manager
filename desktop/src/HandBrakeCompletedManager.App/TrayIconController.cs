@@ -7,6 +7,7 @@ namespace HandBrakeCompletedManager.App;
 internal sealed class TrayIconController : IDisposable
 {
     private readonly Forms.ContextMenuStrip _contextMenu;
+    private readonly Drawing.Icon _applicationIcon;
     private readonly Forms.NotifyIcon _notifyIcon;
     private bool _isDisposed;
 
@@ -22,10 +23,15 @@ internal sealed class TrayIconController : IDisposable
         _contextMenu.Items.Add(new Forms.ToolStripSeparator());
         _contextMenu.Items.Add("Exit", null, (_, _) => exit());
 
+        var executablePath = Environment.ProcessPath;
+        _applicationIcon = string.IsNullOrWhiteSpace(executablePath)
+            ? (Drawing.Icon)Drawing.SystemIcons.Application.Clone()
+            : Drawing.Icon.ExtractAssociatedIcon(executablePath)
+                ?? (Drawing.Icon)Drawing.SystemIcons.Application.Clone();
         _notifyIcon = new Forms.NotifyIcon
         {
             ContextMenuStrip = _contextMenu,
-            Icon = Drawing.SystemIcons.Application,
+            Icon = _applicationIcon,
             Text = TrayStatusFormatter.FormatRecordCount(0),
             Visible = true
         };
@@ -63,6 +69,7 @@ internal sealed class TrayIconController : IDisposable
         _isDisposed = true;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _applicationIcon.Dispose();
         _contextMenu.Dispose();
     }
 }

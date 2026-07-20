@@ -3,8 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:HandBrakeCompletedManager.App"
              ShutdownMode="OnExplicitShutdown"
-             SessionEnding="App_SessionEnding"
-             StartupUri="MainWindow.xaml">
+             Startup="App_Startup"
+             Exit="App_Exit"
+             SessionEnding="App_SessionEnding">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

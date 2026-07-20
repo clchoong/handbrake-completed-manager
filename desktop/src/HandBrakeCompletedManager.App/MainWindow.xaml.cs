@@ -306,6 +306,8 @@ public partial class MainWindow : Window
         _allowClose = true;
     }
 
+    internal void ActivateFromExternalLaunch() => OpenFromTray();
+
     private void OpenFromTray()
     {
         Show();

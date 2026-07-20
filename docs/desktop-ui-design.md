@@ -10,7 +10,7 @@ The desktop interface uses a shared high-end visual system designed for clear da
 - Neutral surfaces, restrained borders, rounded geometry, and Segoe UI typography provide hierarchy without decorative clutter.
 - Success, warning, and destructive actions use consistent green, amber, and red semantic treatments.
 - Completed history remains the central workspace, with search and filters next to the section title and record actions grouped around the current selection.
-- An original navy, white, and amber film/check emblem identifies the executable, every application window, and the dashboard header at small and large sizes.
+- An original full-bleed coral, navy, and cream media/check emblem contrasts against the navy header and identifies the executable, dashboard, and notification-area icon without using HandBrake's official artwork.
 - The history action bar separates the primary source-replacement workflow, everyday play/reveal actions, output recycling, and record-only removal by visual priority.
 
 ## Replacement experience
