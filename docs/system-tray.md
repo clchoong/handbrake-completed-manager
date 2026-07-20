@@ -20,6 +20,8 @@ The tray menu provides:
 - **Refresh history** to restore the window and reload SQLite history.
 - **Exit** to remove the tray icon and terminate the application cleanly.
 
+Tray Exit never waits synchronously for diagnostic logging. Shutdown removes the notification icon and releases the single-instance guard immediately, preventing a hidden half-closed process from intercepting the next launch.
+
 Encode capture is performed by the separate receiver executable and does not require the main window to remain visible.
 
 Versions before 0.3.1 did not enforce single-instance ownership. When upgrading from an older running copy, exit its existing tray icons once before starting the updated executable. Thereafter, copies launched from different folders share the same session-wide instance guard.

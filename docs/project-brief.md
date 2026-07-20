@@ -75,6 +75,8 @@ Example behaviour:
 
 Do not depend on reading HandBrake’s internal Queue file because completed tasks may be excluded from it.
 
+As a separate recovery path, the application may read HandBrake's saved activity logs. Import is allowed only for logs that contain an unambiguous successful-completion result, valid absolute source and destination paths, and a destination file that still exists. The workflow must preview every candidate, deduplicate completed history, retain useful missing-source paths, and never modify HandBrake logs, settings, Queue data, or media files.
+
 ## HandBrake detection
 
 Include a setup wizard with a **Find HandBrake** function.

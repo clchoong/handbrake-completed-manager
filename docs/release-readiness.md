@@ -1,11 +1,11 @@
 # Release readiness
 
-Version 0.5.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.6.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
 - The complete Release solution build succeeded with zero warnings and zero errors.
-- All 215 automated tests passed: 90 core, 63 infrastructure, and 62 finalisation tests.
+- All 221 automated tests passed: 94 core, 65 infrastructure, and 62 finalisation tests.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
@@ -21,11 +21,15 @@ Version 0.5.0 was validated as a self-contained Windows x64 open-source release 
 - Extended row selection supports Ctrl-click, Shift-click, Ctrl+A, selecting all filtered rows, and clearing the selection.
 - Bulk source replacement preflights every record and blocks selected records that resolve to the same final path before confirmation.
 - Bulk source replacement, output recycling, and history removal execute sequentially, allow stopping between records, and report succeeded, failed, and skipped totals.
+- Activity-log parsing tests cover successful, paused, failed, malformed, and fallback-timestamp cases.
+- Activity-log integration tests verify missing-output refusal, completed-history deduplication, and non-destructive import.
+- Real-log read-only validation parsed all 94 successful completion logs in the local sample set and correctly separated existing from missing outputs.
+- Tray Exit no longer synchronously waits for logging on the UI thread, and history removal performs SQLite work away from the interface thread.
 
-The validated archive is `HandBrake-Completed-Manager-0.5.0-win-x64.zip`. Its size is 116,187,677 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.6.0-win-x64.zip`. Its size is 116,205,604 bytes and its SHA-256 checksum is:
 
 ```text
-11B5B0C273BBE5541F14B11E2C1663C54CEC78BEAEC6E5C94ED136F179963BEB
+B74980384456810292A703457C55148BB4C34EBB7A3164D0485ED3A117A54913
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -47,7 +51,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.5.0
+.\scripts\publish-portable.ps1 -Version 0.6.0
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

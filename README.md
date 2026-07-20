@@ -70,6 +70,7 @@ The current Phase 1 implementation provides:
 - The receiver accepts HandBrake completion values from command-line arguments or environment variables.
 - Source and converted file metadata and size comparisons are captured.
 - SQLite stores completed history and rejects repeated callbacks with the same fingerprint.
+- Saved HandBrake activity logs can recover earlier successful encodes when the output still exists; paused, failed, malformed, missing-output, and duplicate logs are reviewed but skipped without modifying logs or media files.
 - The WPF application displays history and aggregate size totals.
 - History refreshes automatically while the application is open.
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
@@ -112,11 +113,13 @@ The current Phase 1 implementation provides:
 - [Product brief](docs/project-brief.md): product scope, requirements, safety rules, and release phases
 - [Completion receiver](docs/completion-receiver.md): receiver interface, persistence, and local validation
 - [HandBrake connection](docs/handbrake-connection.md): detection, pipeline testing, and completion-action configuration
+- [HandBrake activity-log import](docs/handbrake-log-import.md): safe eligibility rules, deduplication, and recovery workflow
 - [Completed history browsing](docs/history-file-actions.md): search, quick filters, sorting, details, file actions, and missing-file behavior
 - [System tray behavior](docs/system-tray.md): close-to-tray lifecycle, status, commands, and Windows shutdown behavior
 - [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
+- [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum
 - [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior

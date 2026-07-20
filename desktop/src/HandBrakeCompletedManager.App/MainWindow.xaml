@@ -36,6 +36,14 @@
                                Text="Permanent source-to-output history after HandBrake finishes" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                    <Button x:Name="ImportLogsButton"
+                            MinWidth="108"
+                            Margin="0,0,8,0"
+                            Background="#263650"
+                            BorderBrush="#3A4A63"
+                            Foreground="White"
+                            Click="ImportLogsButton_Click"
+                            Content="Import logs" />
                     <Button x:Name="RecoveryButton"
                             MinWidth="120"
                             Margin="0,0,8,0"

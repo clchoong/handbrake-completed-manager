@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private readonly UndoCompletionService _undoCompletionService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly OutputRecycleService _outputRecycleService;
+    private readonly HandBrakeLogImportService _handBrakeLogImportService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -121,6 +122,7 @@ public partial class MainWindow : Window
             _replacementOperationRepository,
             _finalizationTransactionRepository,
             new WindowsRecycleBinService());
+        _handBrakeLogImportService = new HandBrakeLogImportService(_repository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -352,10 +354,70 @@ public partial class MainWindow : Window
         }
 
         _allowClose = true;
-        _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application exited from the tray menu.")
-            .GetAwaiter()
-            .GetResult();
+        _historyRefreshTimer.Stop();
+        _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application exited from the tray menu.");
         Close();
+    }
+
+    private async void ImportLogsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var logDirectory = HandBrakeLogImportService.ResolveDefaultLogDirectory();
+        try
+        {
+            ImportLogsButton.IsEnabled = false;
+            StatusText.Text = "Reviewing saved HandBrake activity logs...";
+            var review = await _handBrakeLogImportService.ReviewAsync(logDirectory);
+            if (review.Items.Count == 0)
+            {
+                StatusText.Text = Directory.Exists(logDirectory)
+                    ? "No HandBrake activity logs were found."
+                    : "The default HandBrake activity-log folder does not exist.";
+                return;
+            }
+
+            var confirmationItems = review.Items.Select(item => new BulkConfirmationItem(
+                item.CompletionEvent?.SourcePath ?? Path.GetFileName(item.LogPath),
+                item.CompletionEvent?.DestinationPath ?? string.Empty,
+                item.Status,
+                item.CanImport)).ToArray();
+            var confirmation = new BulkConfirmationWindow(
+                "Import HandBrake activity logs",
+                "Recover completed history from saved logs",
+                "Only logs with a successful HandBrake completion result, valid source and output paths, and an output file that still exists can be imported. Existing history is deduplicated. No media files or HandBrake settings are changed.",
+                $"Import {review.RecoverableCount:N0} recoverable item(s)",
+                confirmationItems)
+            {
+                Owner = this
+            };
+
+            if (confirmation.ShowDialog() != true)
+            {
+                StatusText.Text = "Log import cancelled. Completed history was not changed.";
+                return;
+            }
+
+            var progress = new Progress<string>(message => StatusText.Text = message);
+            var result = await _handBrakeLogImportService.ImportAsync(review.Items, progress);
+            await LoadHistoryAsync();
+            var reviewedDuplicates = review.Items.Count(item => item.Status == "Already in completed history");
+            var duplicateCount = reviewedDuplicates + result.Duplicates;
+            var skippedCount = review.Items.Count - review.RecoverableCount - reviewedDuplicates + result.Skipped;
+            StatusText.Text =
+                $"Log import complete: {result.Imported:N0} imported, {duplicateCount:N0} duplicate, " +
+                $"{skippedCount:N0} skipped, {result.Failures.Count:N0} failed.";
+            _ = _logger.LogAsync(
+                result.Failures.Count == 0 ? DiagnosticLogLevel.Information : DiagnosticLogLevel.Warning,
+                $"HandBrake activity-log import completed: {result.Imported} imported, {duplicateCount} duplicate, {skippedCount} skipped, {result.Failures.Count} failed.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            StatusText.Text = $"Unable to review HandBrake activity logs: {exception.Message}";
+            _ = _logger.LogAsync(DiagnosticLogLevel.Warning, "HandBrake activity logs could not be imported.", exception);
+        }
+        finally
+        {
+            ImportLogsButton.IsEnabled = !_bulkOperationInProgress;
+        }
     }
 
     private async void FindHandBrakeButton_Click(object sender, RoutedEventArgs e)
@@ -1194,18 +1256,19 @@ public partial class MainWindow : Window
 
         var row = selectedRows[0];
 
-        var confirmation = System.Windows.MessageBox.Show(
-            this,
-            $"Remove this record from completed history?\n\n" +
-            $"Source: {row.SourceFilename}\n" +
-            $"Output: {row.DestinationFilename}\n\n" +
-            "The source and output files will not be deleted or changed.",
-            "Remove from history",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
+        var confirmation = new FileActionConfirmationWindow(
+            "Remove from completed history",
+            "Remove this history record?",
+            "This removes only the selected entry from HandBrake Completed Manager.",
+            row.SourcePath,
+            row.DestinationPath,
+            "The source and output files will not be deleted, recycled, renamed, moved, or changed.",
+            "Remove history record")
+        {
+            Owner = this
+        };
 
-        if (confirmation != MessageBoxResult.Yes)
+        if (confirmation.ShowDialog() != true)
         {
             StatusText.Text = "History removal cancelled. No files or records were changed.";
             return;
@@ -1215,7 +1278,7 @@ public partial class MainWindow : Window
         {
             RemoveHistoryButton.IsEnabled = false;
             StatusText.Text = "Removing history record...";
-            var removed = await _repository.RemoveFromHistoryAsync(row.Id);
+            var removed = await Task.Run(() => _repository.RemoveFromHistoryAsync(row.Id));
 
             if (!removed)
             {
@@ -1277,7 +1340,7 @@ public partial class MainWindow : Window
                 StatusText.Text = $"Removing history record {index + 1:N0} of {selectedRows.Count:N0}: {row.DestinationFilename}";
                 try
                 {
-                    if (await _repository.RemoveFromHistoryAsync(row.Id))
+                    if (await Task.Run(() => _repository.RemoveFromHistoryAsync(row.Id)))
                     {
                         succeeded++;
                     }
@@ -1327,6 +1390,7 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = false;
         RefreshButton.IsEnabled = false;
         SettingsButton.IsEnabled = false;
+        ImportLogsButton.IsEnabled = false;
         SelectAllShownButton.IsEnabled = false;
         ClearSelectionButton.IsEnabled = false;
         StopBulkButton.Content = "Stop after current";
@@ -1346,6 +1410,7 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = true;
         RefreshButton.IsEnabled = true;
         SettingsButton.IsEnabled = true;
+        ImportLogsButton.IsEnabled = true;
         StopBulkButton.Visibility = Visibility.Collapsed;
         StopBulkButton.Content = "Stop after current";
         StopBulkButton.IsEnabled = true;

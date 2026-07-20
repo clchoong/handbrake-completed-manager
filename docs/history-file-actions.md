@@ -57,9 +57,9 @@ The application invokes the Windows Recycle Bin with no permanent-delete fallbac
 
 ## Remove from history
 
-**Remove from history** deletes only the selected SQLite history record. A warning confirmation identifies the source and output filenames and states that neither file will be deleted or changed. Cancelling the confirmation leaves the record and both files untouched.
+**Remove from history** deletes only the selected SQLite history record. A styled confirmation identifies the exact source and output paths and states that neither file will be deleted or changed. Cancelling the confirmation leaves the record and both files untouched.
 
-After a confirmed removal, the history table, active filter results, summary totals, and details selection update immediately. This action cannot be used to delete source or output files.
+After a confirmed removal, SQLite work runs away from the interface thread so the confirmation can close smoothly while the history table, active filter results, summary totals, and details selection update. This action cannot be used to delete source or output files.
 
 ## Bulk actions
 
