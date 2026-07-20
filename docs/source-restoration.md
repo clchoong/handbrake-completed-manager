@@ -39,4 +39,4 @@ Failures after intent are written to the revisioned transaction journal. Recover
 
 ## Remaining safety boundary
 
-No desktop command currently starts undo or source restoration. Guarded source recycling is implemented separately, but final-file recycling and transaction completion remain disabled. The next milestone must complete the forward transaction and make restart continuation record-specific without weakening the restoration boundary.
+No desktop command currently starts undo or source restoration. Forward finalisation can now complete atomically, but undo preparation, final-file recycling, and undo completion remain disabled. The next milestone must expose restoration only as the first guarded undo action.

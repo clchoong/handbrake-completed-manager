@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Replacement recovery review"
-        Width="900"
+        Width="940"
         Height="500"
         MinWidth="700"
         MinHeight="360"
@@ -16,15 +16,18 @@
         <StackPanel Margin="0,0,0,14">
             <TextBlock FontSize="22" FontWeight="SemiBold" Text="Replacement recovery review" />
             <TextBlock Margin="0,5,0,0"
-                       Text="Read-only restart assessment. Open the matching completed record and choose Review replacement to perform an available recovery action."
+                       Text="Select an item and choose Open record to continue its guarded recovery in the matching replacement review. No recovery action runs automatically."
                        TextWrapping="Wrap" />
         </StackPanel>
-        <DataGrid Grid.Row="1"
+        <DataGrid x:Name="RecoveryGrid"
+                  Grid.Row="1"
                   ItemsSource="{Binding}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   CanUserAddRows="False"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  SelectionChanged="RecoveryGrid_SelectionChanged"
+                  MouseDoubleClick="RecoveryGrid_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Updated" Binding="{Binding UpdatedUtc, StringFormat={}{0:g}}" Width="145" />
                 <DataGridTextColumn Header="Source" Binding="{Binding SourcePath}" Width="2*" MinWidth="220" />
@@ -32,13 +35,23 @@
                 <DataGridTextColumn Header="Assessment" Binding="{Binding Summary}" Width="3*" MinWidth="280" />
             </DataGrid.Columns>
         </DataGrid>
-        <Button Grid.Row="2"
-                Width="90"
-                Height="32"
-                Margin="0,14,0,0"
-                HorizontalAlignment="Right"
-                IsDefault="True"
-                Click="CloseButton_Click"
-                Content="Close" />
+        <StackPanel Grid.Row="2"
+                    Margin="0,14,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+            <Button x:Name="OpenRecordButton"
+                    Width="110"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    IsDefault="True"
+                    Click="OpenRecordButton_Click"
+                    Content="Open record" />
+            <Button Width="90"
+                    Height="32"
+                    IsCancel="True"
+                    Click="CloseButton_Click"
+                    Content="Close" />
+        </StackPanel>
     </Grid>
 </Window>

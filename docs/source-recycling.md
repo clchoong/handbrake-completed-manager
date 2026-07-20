@@ -34,4 +34,4 @@ The verified backup and promoted final file are never moved, renamed, truncated,
 
 ## Remaining safety boundary
 
-`SourceRecycled` is currently the final executable checkpoint. Forward transaction completion, automatic restart continuation, desktop undo, and final-file recycling remain disabled.
+After `SourceRecycled`, [Forward completion and restart continuation](forward-completion-and-recovery.md) performs a final read-only integrity check and atomically closes the SQLite transaction. Desktop undo and final-file recycling remain disabled.

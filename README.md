@@ -50,7 +50,7 @@ The generated folder and ZIP archive are placed under `artifacts\portable\win-x6
 
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
-Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion to an unoccupied final path, forced Windows Recycle Bin source retirement, and a tested backend for verified source restoration. Permanent source deletion and completed replacement remain disabled.
+Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion to an unoccupied final path, forced Windows Recycle Bin source retirement, atomic forward completion, record-specific restart continuation, and a tested backend for verified source restoration. Permanent source deletion and desktop undo remain disabled.
 
 ## Implemented capabilities
 
@@ -73,7 +73,7 @@ The current Phase 1 implementation provides:
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
 - Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
 - A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
-- Persistent replacement, original-backup, and finalisation-journal stages support interruption recovery; source movement and completed replacement remain disabled.
+- Persistent replacement, original-backup, and finalisation-journal stages support interruption recovery through atomic forward completion; permanent source deletion and desktop undo remain disabled.
 - The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
 - Retained temporary artifacts can be permanently discarded after a separate confirmation; cleanup validates every recorded path, refuses active file locks or stale state, and immediately re-runs preflight for a safe retry.
 - After the converted temporary copy is verified, the original source can be streamed to a create-new backup path with independent progress, cancellation, durable state, and size/SHA-256 verification while the source remains untouched.
@@ -84,6 +84,7 @@ The current Phase 1 implementation provides:
 - After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
 - A backend undo executor can reconstruct a missing source through a deterministic, resumable restore artifact, full SHA-256 verification, and an atomic non-overwriting rename while preserving the final file and backup. Desktop undo controls are not yet exposed.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
+- A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -103,4 +104,5 @@ The current Phase 1 implementation provides:
 - [Atomic final-file promotion](docs/atomic-final-promotion.md): confirmation, protected rename, refusal rules, and restart recovery
 - [Verified source restoration](docs/source-restoration.md): resumable verified copy, atomic non-overwriting restore, refusal rules, and crash recovery
 - [Guarded source recycling](docs/source-recycling.md): confirmation, forced Windows Recycle Bin behavior, protected verification, and intent-first recovery
+- [Forward completion and restart continuation](docs/forward-completion-and-recovery.md): final integrity gate, atomic SQLite completion, idempotency, and direct record recovery
 

@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private readonly FinalizationPreparationService _finalizationPreparationService;
     private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly SourceRecycleService _sourceRecycleService;
+    private readonly FinalizationCompletionService _finalizationCompletionService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
@@ -74,6 +75,9 @@ public partial class MainWindow : Window
             _replacementOperationRepository,
             _finalizationTransactionRepository,
             new WindowsRecycleBinService());
+        _finalizationCompletionService = new FinalizationCompletionService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository);
         _replacementRecoveryService = new ReplacementRecoveryService(
             _replacementOperationRepository,
             _originalBackupRepository,
@@ -179,7 +183,32 @@ public partial class MainWindow : Window
             return;
         }
 
-        new RecoveryOverviewWindow(_recoveryItems) { Owner = this }.ShowDialog();
+        var recoveryWindow = new RecoveryOverviewWindow(_recoveryItems) { Owner = this };
+        if (recoveryWindow.ShowDialog() != true || recoveryWindow.SelectedCompletedEncodeId is not Guid recordId)
+        {
+            return;
+        }
+
+        var row = HistoryRows.FirstOrDefault(item => item.Id == recordId);
+        if (row is null)
+        {
+            await LoadHistoryAsync();
+            row = HistoryRows.FirstOrDefault(item => item.Id == recordId);
+        }
+
+        if (row is null)
+        {
+            StatusText.Text = "The recovery item no longer has a matching completed-history record.";
+            await RefreshRecoverySummaryAsync();
+            return;
+        }
+
+        HistorySearchTextBox.Clear();
+        QuickFilterComboBox.SelectedIndex = 0;
+        ApplyHistoryFilter();
+        HistoryGrid.SelectedItem = row;
+        HistoryGrid.ScrollIntoView(row);
+        ReviewReplacementButton_Click(this, new RoutedEventArgs());
     }
 
     private async Task RefreshRecoverySummaryAsync()
@@ -589,12 +618,18 @@ public partial class MainWindow : Window
                 _finalizationTransactionRepository,
                 _finalizationPreparationService,
                 _finalizationPromotionService,
-                _sourceRecycleService)
+                _sourceRecycleService,
+                _finalizationCompletionService)
             {
                 Owner = this
             };
             reviewWindow.ShowDialog();
-            StatusText.Text = reviewWindow.SourceRecycleResult is not null
+            await LoadHistoryAsync();
+            StatusText.Text = reviewWindow.FinalizationCompletionResult is not null
+                ? "Replacement finalisation completed. The promoted final file and verified original backup remain available."
+                : reviewWindow.FinalizationCompletionFailure is not null
+                    ? $"Finalisation completion requires recovery review: {reviewWindow.FinalizationCompletionFailure.Message}"
+                : reviewWindow.SourceRecycleResult is not null
                 ? "Original source moved to the Windows Recycle Bin. The verified backup and promoted final file remain available."
                 : reviewWindow.SourceRecycleFailure is not null
                     ? $"Source recycling requires recovery review: {reviewWindow.SourceRecycleFailure.Message}"
@@ -627,6 +662,7 @@ public partial class MainWindow : Window
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
                 reviewWindow.CopyFailure is not null ||
+                reviewWindow.FinalizationCompletionFailure is not null ||
                 reviewWindow.SourceRecycleFailure is not null ||
                 reviewWindow.PromotionFailure is not null ||
                 reviewWindow.CleanupFailure is not null ||
@@ -639,7 +675,9 @@ public partial class MainWindow : Window
                  !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
-                reviewWindow.SourceRecycleResult is not null
+                reviewWindow.FinalizationCompletionResult is not null
+                    ? "The replacement finalisation transaction completed atomically."
+                : reviewWindow.SourceRecycleResult is not null
                     ? "The verified original source was moved to the Windows Recycle Bin."
                 : reviewWindow.PromotionResult is not null
                     ? "A verified temporary copy was atomically promoted; the source was unchanged."
@@ -667,6 +705,8 @@ public partial class MainWindow : Window
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
                 reviewWindow.CopyFailure ??
+                reviewWindow.FinalizationCompletionFailure ??
+                reviewWindow.SourceRecycleFailure ??
                 reviewWindow.PromotionFailure ??
                 reviewWindow.CleanupFailure ??
                 reviewWindow.BackupFailure ??
