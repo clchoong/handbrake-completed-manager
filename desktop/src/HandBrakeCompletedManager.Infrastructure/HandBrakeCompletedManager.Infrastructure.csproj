@@ -22,6 +22,9 @@
     <EmbeddedResource Include="..\..\..\database\migrations\002_replacement_operations.sql"
                       Link="Migrations\002_replacement_operations.sql"
                       LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql" />
+    <EmbeddedResource Include="..\..\..\database\migrations\003_replacement_retry_index.sql"
+                      Link="Migrations\003_replacement_retry_index.sql"
+                      LogicalName="HandBrakeCompletedManager.Infrastructure.Migrations.003_replacement_retry_index.sql" />
   </ItemGroup>
 
 </Project>

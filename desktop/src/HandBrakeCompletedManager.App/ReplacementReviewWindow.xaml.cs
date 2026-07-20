@@ -8,9 +8,12 @@ namespace HandBrakeCompletedManager.App;
 
 public partial class ReplacementReviewWindow : Window
 {
-    private readonly ReplacementPlan _plan;
+    private ReplacementPlan _plan;
     private readonly TemporaryCopyService _temporaryCopyService;
+    private readonly TemporaryCopyCleanupService _temporaryCopyCleanupService;
     private readonly ReplacementOperationRepository _operationRepository;
+    private readonly ReplacementPreflightService _preflightService = new();
+    private ReplacementOperation? _recoveryOperation;
     private CancellationTokenSource? _copyCancellation;
     private bool _copyInProgress;
     private bool _closeWhenFinished;
@@ -18,15 +21,33 @@ public partial class ReplacementReviewWindow : Window
     public ReplacementReviewWindow(
         ReplacementPlan plan,
         TemporaryCopyService temporaryCopyService,
+        TemporaryCopyCleanupService temporaryCopyCleanupService,
         ReplacementOperationRepository operationRepository)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
+        ArgumentNullException.ThrowIfNull(temporaryCopyCleanupService);
         ArgumentNullException.ThrowIfNull(operationRepository);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
+        _temporaryCopyCleanupService = temporaryCopyCleanupService;
         _operationRepository = operationRepository;
         InitializeComponent();
+        ApplyPlan(plan);
+        PrepareCopyButton.IsEnabled = false;
+        CopyStatusText.Text = "Checking previous operation state...";
+        Loaded += ReplacementReviewWindow_Loaded;
+        Closing += ReplacementReviewWindow_Closing;
+    }
+
+    public TemporaryCopyResult? CopyResult { get; private set; }
+    public TemporaryCopyCleanupResult? CleanupResult { get; private set; }
+    public bool CopyWasCancelled { get; private set; }
+    public Exception? CopyFailure { get; private set; }
+    public Exception? CleanupFailure { get; private set; }
+
+    private void ApplyPlan(ReplacementPlan plan)
+    {
         SourcePathTextBox.Text = plan.CompletedEncode.SourcePath;
         DestinationPathTextBox.Text = plan.CompletedEncode.DestinationPath;
         FinalPathTextBox.Text = plan.Paths.FinalPath;
@@ -45,21 +66,23 @@ public partial class ReplacementReviewWindow : Window
             : plan.Issues.Select(issue =>
                 $"{(issue.Severity == ReplacementIssueSeverity.Blocking ? "BLOCKING" : "WARNING")}: {issue.Message}")
                 .ToArray();
-        PrepareCopyButton.IsEnabled = false;
-        CopyStatusText.Text = "Checking previous operation state...";
-        Loaded += ReplacementReviewWindow_Loaded;
-        Closing += ReplacementReviewWindow_Closing;
     }
-
-    public TemporaryCopyResult? CopyResult { get; private set; }
-    public bool CopyWasCancelled { get; private set; }
-    public Exception? CopyFailure { get; private set; }
 
     private async void ReplacementReviewWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        await RefreshRecoveryStateAsync(updateCopyStatus: true);
+    }
+
+    private async Task RefreshRecoveryStateAsync(bool updateCopyStatus)
+    {
         try
         {
+            _plan = _preflightService.Review(_plan.CompletedEncode);
+            ApplyPlan(_plan);
             var canPrepare = _plan.CanProceed;
+            _recoveryOperation = null;
+            DiscardTemporaryButton.IsEnabled = false;
+            RecoveryStatusText.Visibility = Visibility.Collapsed;
             await _operationRepository.InitializeAsync();
             var operation = await _operationRepository.GetLatestForCompletedEncodeAsync(
                 _plan.CompletedEncode.Id);
@@ -74,20 +97,32 @@ public partial class ReplacementReviewWindow : Window
                     File.Exists(operation.TemporaryPath));
                 if (recoveryReview.ShouldDisplay)
                 {
+                    _recoveryOperation = operation;
                     ShowRecoveryState(recoveryReview);
                     canPrepare &= !recoveryReview.BlocksNewCopy;
+                    DiscardTemporaryButton.IsEnabled =
+                        File.Exists(operation.TemporaryPath) &&
+                        operation.Status != ReplacementOperationStatus.Completed &&
+                        !_copyInProgress;
                 }
             }
 
-            PrepareCopyButton.IsEnabled = canPrepare;
-            CopyStatusText.Text = canPrepare
-                ? "Ready to create a verified temporary copy."
-                : "Temporary-copy preparation is not available until the displayed safety or recovery issue is resolved.";
+            PrepareCopyButton.IsEnabled = canPrepare && !_copyInProgress;
+            if (updateCopyStatus)
+            {
+                CopyStatusText.Text = canPrepare
+                    ? "Ready to create a verified temporary copy."
+                    : "Temporary-copy preparation is not available until the displayed safety or recovery issue is resolved.";
+            }
         }
         catch (Exception exception)
         {
             PrepareCopyButton.IsEnabled = false;
-            CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
+            DiscardTemporaryButton.IsEnabled = false;
+            if (updateCopyStatus)
+            {
+                CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
+            }
             RecoveryStatusText.Text = $"Existing operation state could not be read: {exception.Message}";
             RecoveryStatusText.Visibility = Visibility.Visible;
         }
@@ -117,10 +152,13 @@ public partial class ReplacementReviewWindow : Window
 
         _copyInProgress = true;
         CopyResult = null;
+        CleanupResult = null;
         CopyWasCancelled = false;
         CopyFailure = null;
+        CleanupFailure = null;
         PrepareCopyButton.IsEnabled = false;
         CancelCopyButton.IsEnabled = true;
+        DiscardTemporaryButton.IsEnabled = false;
         CopyProgressBar.Value = 0;
         CopyStatusText.Text = "Preparing temporary copy...";
         _copyCancellation = new CancellationTokenSource();
@@ -165,12 +203,64 @@ public partial class ReplacementReviewWindow : Window
         {
             _copyInProgress = false;
             CancelCopyButton.IsEnabled = false;
+            await RefreshRecoveryStateAsync(updateCopyStatus: false);
             _copyCancellation.Dispose();
             _copyCancellation = null;
             if (_closeWhenFinished)
             {
                 Close();
             }
+        }
+    }
+
+    private async void DiscardTemporaryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_copyInProgress ||
+            _recoveryOperation is null ||
+            !File.Exists(_recoveryOperation.TemporaryPath))
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            "Permanently discard only this temporary-copy file?\n\n" +
+            _recoveryOperation.TemporaryPath +
+            "\n\nThis cannot be undone. The source, converted output, planned final file, and backup path will not be changed.",
+            "Confirm temporary-file cleanup",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        PrepareCopyButton.IsEnabled = false;
+        DiscardTemporaryButton.IsEnabled = false;
+        CleanupResult = null;
+        CleanupFailure = null;
+        try
+        {
+            CleanupResult = await _temporaryCopyCleanupService.DiscardAsync(
+                _plan,
+                _recoveryOperation);
+            await RefreshRecoveryStateAsync(updateCopyStatus: false);
+            CopyProgressBar.Value = 0;
+            CopyStatusText.Text = _plan.CanProceed
+                ? $"Temporary file discarded ({FormatBytes(CleanupResult.BytesRemoved)}). " +
+                  "A fresh preflight passed and the copy can now be retried."
+                : $"Temporary file discarded ({FormatBytes(CleanupResult.BytesRemoved)}). " +
+                  "The fresh preflight found another issue that must be resolved before retrying.";
+            CopyStatusText.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        }
+        catch (Exception exception)
+        {
+            CleanupFailure = exception;
+            CopyStatusText.Text =
+                $"Temporary-file cleanup was refused or failed: {exception.Message} No original file was changed.";
+            CopyStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
+            await RefreshRecoveryStateAsync(updateCopyStatus: false);
         }
     }
 

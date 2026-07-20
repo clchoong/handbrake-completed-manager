@@ -136,6 +136,34 @@ public sealed class ReplacementOperationRepository(string databasePath)
         return await reader.ReadAsync(cancellationToken) ? ReadOperation(reader) : null;
     }
 
+    public async Task<bool> TryCancelForTemporaryCleanupAsync(
+        Guid operationId,
+        DateTimeOffset expectedUpdatedUtc,
+        long bytesCopied,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE replacement_operations
+            SET status = 'Cancelled',
+                stage = 'Cancelled',
+                bytes_copied = $bytesCopied,
+                verification_status = 'NotVerified',
+                failure_message = 'Temporary copy discarded by the user after explicit confirmation.',
+                date_updated_utc = $updatedUtc
+            WHERE id = $id
+              AND date_updated_utc = $expectedUpdatedUtc
+              AND status <> 'Completed';
+            """;
+        command.Parameters.AddWithValue("$id", operationId.ToString("D"));
+        command.Parameters.AddWithValue("$expectedUpdatedUtc", FormatDate(expectedUpdatedUtc));
+        command.Parameters.AddWithValue("$bytesCopied", bytesCopied);
+        command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connectionString = new SqliteConnectionStringBuilder

@@ -7,7 +7,7 @@ namespace HandBrakeCompletedManager.Infrastructure.Tests;
 public sealed class CompletedEncodeRepositoryTests
 {
     [Fact]
-    public async Task InitializeAsync_UpgradesInitialDatabaseWithReplacementOperations()
+    public async Task InitializeAsync_UpgradesExistingReplacementSchemaWithRetryIndex()
     {
         var testDirectory = Path.Combine(
             Path.GetTempPath(),
@@ -22,13 +22,19 @@ public sealed class CompletedEncodeRepositoryTests
             {
                 await connection.OpenAsync();
                 var assembly = typeof(CompletedEncodeRepository).Assembly;
-                await using var stream = assembly.GetManifestResourceStream(
-                    "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql")
-                    ?? throw new InvalidOperationException("Initial migration resource is missing.");
-                using var migrationReader = new StreamReader(stream);
-                await using var migrationCommand = connection.CreateCommand();
-                migrationCommand.CommandText = await migrationReader.ReadToEndAsync();
-                await migrationCommand.ExecuteNonQueryAsync();
+                foreach (var resourceName in new[]
+                         {
+                             "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql",
+                             "HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql"
+                         })
+                {
+                    await using var stream = assembly.GetManifestResourceStream(resourceName)
+                        ?? throw new InvalidOperationException($"Migration resource is missing: {resourceName}");
+                    using var migrationReader = new StreamReader(stream);
+                    await using var migrationCommand = connection.CreateCommand();
+                    migrationCommand.CommandText = await migrationReader.ReadToEndAsync();
+                    await migrationCommand.ExecuteNonQueryAsync();
+                }
             }
 
             await new CompletedEncodeRepository(databasePath).InitializeAsync();
@@ -42,6 +48,15 @@ public sealed class CompletedEncodeRepositoryTests
                 WHERE type = 'table' AND name = 'replacement_operations';
                 """;
             Assert.Equal(1L, await verificationCommand.ExecuteScalarAsync());
+            verificationCommand.CommandText = """
+                SELECT sql
+                FROM sqlite_master
+                WHERE type = 'index' AND name = 'ux_replacement_operations_active_encode';
+                """;
+            var retryIndexSql = Assert.IsType<string>(await verificationCommand.ExecuteScalarAsync());
+            Assert.Contains("Planned", retryIndexSql);
+            Assert.Contains("InProgress", retryIndexSql);
+            Assert.DoesNotContain("Failed", retryIndexSql);
         }
         finally
         {

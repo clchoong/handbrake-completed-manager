@@ -54,15 +54,16 @@ The review window exposes this capability with the exact temporary path, explici
 
 When the review is opened again, it displays the latest related operation. An incomplete operation or any existing temporary file blocks a new copy. A failed or cancelled attempt with no remaining partial file is reported but may be retried after its cause is resolved.
 
+If a recorded temporary file exists, **Discard temporary file** provides an explicit recovery cleanup. The confirmation shows the exact path and states that deletion is permanent. Cleanup proceeds only when the operation still matches the reviewed encode and paths, remains the latest database state, is not completed, and the file can be opened exclusively. It never targets the source, converted output, final path, or backup path. After cleanup, preflight runs again and enables retry only if every current check passes.
+
 ## Still disabled
 
 Passing preflight does not enable source replacement. The following must be implemented and tested before any destructive transition is available:
 
-1. Explicit recovery cleanup and retry controls for retained partial files.
-2. Original backup with conflict-safe naming.
-3. Atomic finalisation.
-4. Restart continuation decisions.
-5. Undo and restore-original behavior.
-6. Explicit final user confirmation.
+1. Original backup with conflict-safe naming and verification.
+2. Atomic finalisation.
+3. Restart continuation decisions beyond cleanup/retry.
+4. Undo and restore-original behavior.
+5. Explicit final user confirmation.
 
 The mandatory rule remains: never remove or archive the source until the converted file has been copied to the source location and verified.

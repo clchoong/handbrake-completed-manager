@@ -111,6 +111,13 @@
                     IsEnabled="False"
                     Click="CancelCopyButton_Click"
                     Content="Cancel copy" />
+            <Button x:Name="DiscardTemporaryButton"
+                    Width="155"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    Click="DiscardTemporaryButton_Click"
+                    Content="Discard temporary file" />
             <Button Width="90" Height="32" IsCancel="True" Click="CloseButton_Click" Content="Close" />
         </StackPanel>
     </Grid>

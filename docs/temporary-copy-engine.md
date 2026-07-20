@@ -12,6 +12,20 @@ Success displays the verified byte count and SHA-256 digest. Cancellation or fai
 
 Opening the review again shows the latest durable operation state. A partial file or incomplete operation prevents another attempt from overwriting recovery evidence. A failed attempt that created no partial file can be retried after the underlying problem is fixed.
 
+## Cleanup and retry
+
+The review window can permanently discard a retained temporary artifact after a separate confirmation that displays its exact path. Cleanup is intentionally narrow:
+
+- The operation identity and every recorded path must exactly match the current reviewed plan.
+- The `.hbcm-copying` suffix is mandatory, and the path must differ from the source, converted output, final path, and backup path.
+- The operation must still be the latest state for that encode and must not be completed.
+- The file must accept an exclusive read lock, which refuses cleanup while another process is copying it.
+- Directories, missing files, changed operation state, and unrelated paths are refused.
+
+The durable operation is cancelled before the temporary file is deleted. If deletion fails, the file remains visible to recovery review and cleanup can be attempted again. After successful deletion, the application re-runs preflight; retry is enabled only when the fresh plan passes.
+
+Database migration `003_replacement_retry_index.sql` no longer treats failed attempts as active operations. This permits a corrected retry when no partial artifact remains, while still preventing concurrent planned or in-progress operations for the same encode.
+
 ## Copy workflow
 
 Before writing, the engine:

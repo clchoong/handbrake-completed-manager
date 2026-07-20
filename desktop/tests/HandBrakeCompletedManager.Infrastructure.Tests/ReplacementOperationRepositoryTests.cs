@@ -145,6 +145,67 @@ public sealed class ReplacementOperationRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task AddAsync_AllowsPlannedRetryAfterFailedOperation()
+    {
+        var testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "hbcm-replacement-operation-tests",
+            Guid.NewGuid().ToString("N"));
+        var databasePath = Path.Combine(testDirectory, "history.db");
+        var completedRepository = new CompletedEncodeRepository(databasePath);
+        var operationRepository = new ReplacementOperationRepository(databasePath);
+        var completedEncode = CreateCompletedEncode();
+        var createdAt = new DateTimeOffset(2026, 7, 20, 2, 0, 0, TimeSpan.Zero);
+
+        try
+        {
+            await completedRepository.InitializeAsync();
+            Assert.True(await completedRepository.AddAsync(completedEncode));
+            var failed = new ReplacementOperation(
+                Guid.NewGuid(),
+                completedEncode.Id,
+                ReplacementOperationStatus.Failed,
+                ReplacementOperationStage.Failed,
+                completedEncode.SourcePath,
+                completedEncode.DestinationPath,
+                @"D:\Videos\Source.mp4",
+                @"D:\Videos\Source.mp4.hbcm-copying",
+                @"D:\Videos\HandBrake Original Backup\Source.mkv",
+                1_000,
+                400,
+                0,
+                ReplacementVerificationStatus.Failed,
+                "Insufficient space.",
+                createdAt,
+                createdAt);
+            await operationRepository.AddAsync(failed);
+
+            var retry = failed with
+            {
+                Id = Guid.NewGuid(),
+                Status = ReplacementOperationStatus.Planned,
+                Stage = ReplacementOperationStage.Preparing,
+                VerificationStatus = ReplacementVerificationStatus.NotVerified,
+                FailureMessage = null,
+                DateCreatedUtc = createdAt.AddMinutes(1),
+                DateUpdatedUtc = createdAt.AddMinutes(1)
+            };
+            await operationRepository.AddAsync(retry);
+
+            Assert.Equal(retry.Id, (await operationRepository.GetLatestForCompletedEncodeAsync(
+                completedEncode.Id))?.Id);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+    }
+
     private static CompletedEncode CreateCompletedEncode()
     {
         var timestamp = new DateTimeOffset(2026, 7, 20, 1, 2, 3, TimeSpan.Zero);

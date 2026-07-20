@@ -74,6 +74,7 @@ The current Phase 1 implementation provides:
 - A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
 - Persistent replacement stages and progress fields support interruption recovery; source backup and final replacement remain disabled.
 - The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
+- Retained temporary artifacts can be permanently discarded after a separate confirmation; cleanup validates every recorded path, refuses active file locks or stale state, and immediately re-runs preflight for a safe retry.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation

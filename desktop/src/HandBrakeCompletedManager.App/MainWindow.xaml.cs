@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly ReplacementPreflightService _replacementPreflightService = new();
     private readonly ReplacementOperationRepository _replacementOperationRepository;
     private readonly TemporaryCopyService _temporaryCopyService;
+    private readonly TemporaryCopyCleanupService _temporaryCopyCleanupService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -46,6 +47,7 @@ public partial class MainWindow : Window
         _repository = new CompletedEncodeRepository(_databasePath);
         _replacementOperationRepository = new ReplacementOperationRepository(_databasePath);
         _temporaryCopyService = new TemporaryCopyService(_replacementOperationRepository);
+        _temporaryCopyCleanupService = new TemporaryCopyCleanupService(_replacementOperationRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -517,6 +519,7 @@ public partial class MainWindow : Window
             var reviewWindow = new ReplacementReviewWindow(
                 plan,
                 _temporaryCopyService,
+                _temporaryCopyCleanupService,
                 _replacementOperationRepository)
             {
                 Owner = this
@@ -524,27 +527,37 @@ public partial class MainWindow : Window
             reviewWindow.ShowDialog();
             StatusText.Text = reviewWindow.CopyResult is not null
                 ? "Verified temporary copy created. Source backup and replacement remain disabled."
+                : reviewWindow.CleanupResult is not null
+                    ? "Temporary recovery file discarded. A fresh copy can now be started."
                 : reviewWindow.CopyWasCancelled
                     ? "Temporary copy cancelled. Any partial file was retained; original files were unchanged."
                     : reviewWindow.CopyFailure is not null
                         ? $"Temporary copy failed: {reviewWindow.CopyFailure.Message}"
+                        : reviewWindow.CleanupFailure is not null
+                            ? $"Temporary-file cleanup failed: {reviewWindow.CleanupFailure.Message}"
                         : plan.CanProceed
                             ? "Replacement preflight passed. No original files were changed."
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
-                reviewWindow.CopyFailure is not null || !plan.CanProceed
+                reviewWindow.CopyFailure is not null ||
+                reviewWindow.CleanupFailure is not null ||
+                (reviewWindow.CopyResult is null && reviewWindow.CleanupResult is null && !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
                 reviewWindow.CopyResult is not null
                     ? "A replacement temporary copy was created and verified."
+                    : reviewWindow.CleanupResult is not null
+                        ? "A replacement temporary file was explicitly discarded."
                     : reviewWindow.CopyWasCancelled
                         ? "A replacement temporary copy was cancelled."
                         : reviewWindow.CopyFailure is not null
                             ? "A replacement temporary copy failed."
+                            : reviewWindow.CleanupFailure is not null
+                                ? "Replacement temporary-file cleanup failed."
                             : plan.CanProceed
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
-                reviewWindow.CopyFailure);
+                reviewWindow.CopyFailure ?? reviewWindow.CleanupFailure);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
