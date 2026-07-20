@@ -40,6 +40,11 @@ public sealed record SourceRestorationResult(
     bool WasRecovered,
     bool WasResumed);
 
+public sealed record SourceRecycleResult(
+    Guid OperationId,
+    string SourcePath,
+    bool WasRecovered);
+
 public static class FinalizationStateMachine
 {
     private static readonly IReadOnlyDictionary<FinalizationCheckpoint, IReadOnlySet<FinalizationCheckpoint>> Transitions =

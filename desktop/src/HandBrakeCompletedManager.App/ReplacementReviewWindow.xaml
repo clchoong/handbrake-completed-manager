@@ -25,7 +25,7 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <TextBlock FontWeight="SemiBold"
-                           Text="Safety boundary — this window can create and verify separate temporary and original-backup copies. It cannot replace or delete the source."
+                           Text="Safety boundary — each file transition requires separate confirmation. Source retirement uses only the Windows Recycle Bin and never permanent deletion."
                            TextWrapping="Wrap" />
             </Border>
         </StackPanel>
@@ -120,9 +120,16 @@
                         <Button x:Name="PromoteFinalButton"
                                 Width="165"
                                 Height="30"
+                                Margin="0,0,8,0"
                                 IsEnabled="False"
                                 Click="PromoteFinalButton_Click"
                                 Content="Promote verified copy" />
+                        <Button x:Name="RecycleSourceButton"
+                                Width="150"
+                                Height="30"
+                                IsEnabled="False"
+                                Click="RecycleSourceButton_Click"
+                                Content="Recycle original source" />
                     </StackPanel>
                     <TextBlock x:Name="FinalizationStatusText"
                                Margin="0,4,10,0"

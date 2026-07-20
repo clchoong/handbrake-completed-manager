@@ -50,7 +50,7 @@ The generated folder and ZIP archive are placed under `artifacts\portable\win-x6
 
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
-Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion to an unoccupied final path, and a tested backend for verified source restoration. The original source is never moved or deleted by the currently exposed workflow; source retirement and completed replacement remain disabled.
+Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion to an unoccupied final path, forced Windows Recycle Bin source retirement, and a tested backend for verified source restoration. Permanent source deletion and completed replacement remain disabled.
 
 ## Implemented capabilities
 
@@ -82,7 +82,8 @@ The current Phase 1 implementation provides:
 - A restart-recovery overview inventories incomplete replacement operations and suggests the next safe review action; it does not perform recovery automatically.
 - Successful readiness review persists a revisioned transaction journal containing verified source and final-file digests.
 - After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
-- A backend undo executor can reconstruct a missing source through a deterministic, resumable restore artifact, full SHA-256 verification, and an atomic non-overwriting rename while preserving the final file and backup. It is not exposed while source recycling remains disabled.
+- A backend undo executor can reconstruct a missing source through a deterministic, resumable restore artifact, full SHA-256 verification, and an atomic non-overwriting rename while preserving the final file and backup. Desktop undo controls are not yet exposed.
+- After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -101,4 +102,5 @@ The current Phase 1 implementation provides:
 - [Finalisation transaction design](docs/finalization-transaction-design.md): durable checkpoints, forward/undo ordering, crash decisions, and execution boundary
 - [Atomic final-file promotion](docs/atomic-final-promotion.md): confirmation, protected rename, refusal rules, and restart recovery
 - [Verified source restoration](docs/source-restoration.md): resumable verified copy, atomic non-overwriting restore, refusal rules, and crash recovery
+- [Guarded source recycling](docs/source-recycling.md): confirmation, forced Windows Recycle Bin behavior, protected verification, and intent-first recovery
 

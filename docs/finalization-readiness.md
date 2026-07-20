@@ -39,4 +39,4 @@ When the integrity review passes, the application can persist a `Prepared` trans
 
 The prepared temporary copy may now be promoted through the separately confirmed [atomic final-file promotion](atomic-final-promotion.md) step. Promotion leaves the original source and verified backup untouched.
 
-Source recycling and completed replacement remain disabled. The application also has no command that restores the source, recycles the promoted final file, or performs undo. The checkpoint design and remaining crash-boundary rules are documented in [Finalisation transaction design](finalization-transaction-design.md).
+Passing readiness does not itself authorize source recycling. After promotion, [Guarded source recycling](source-recycling.md) is available only through a later, separate confirmation. Completed replacement, source restoration controls, promoted-final recycling, and undo remain disabled. The checkpoint design and crash-boundary rules are documented in [Finalisation transaction design](finalization-transaction-design.md).

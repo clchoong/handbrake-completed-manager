@@ -19,6 +19,7 @@ public partial class ReplacementReviewWindow : Window
     private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
     private readonly FinalizationPreparationService _finalizationPreparationService;
     private readonly FinalizationPromotionService _finalizationPromotionService;
+    private readonly SourceRecycleService _sourceRecycleService;
     private readonly ReplacementPreflightService _preflightService = new();
     private ReplacementOperation? _recoveryOperation;
     private OriginalBackupState? _backupState;
@@ -28,6 +29,7 @@ public partial class ReplacementReviewWindow : Window
     private bool _copyInProgress;
     private bool _backupInProgress;
     private bool _promotionInProgress;
+    private bool _sourceRecycleInProgress;
     private bool _closeWhenFinished;
 
     public ReplacementReviewWindow(
@@ -41,7 +43,8 @@ public partial class ReplacementReviewWindow : Window
         FinalizationReadinessService finalizationReadinessService,
         FinalizationTransactionRepository finalizationTransactionRepository,
         FinalizationPreparationService finalizationPreparationService,
-        FinalizationPromotionService finalizationPromotionService)
+        FinalizationPromotionService finalizationPromotionService,
+        SourceRecycleService sourceRecycleService)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
@@ -54,6 +57,7 @@ public partial class ReplacementReviewWindow : Window
         ArgumentNullException.ThrowIfNull(finalizationTransactionRepository);
         ArgumentNullException.ThrowIfNull(finalizationPreparationService);
         ArgumentNullException.ThrowIfNull(finalizationPromotionService);
+        ArgumentNullException.ThrowIfNull(sourceRecycleService);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
         _temporaryCopyCleanupService = temporaryCopyCleanupService;
@@ -65,6 +69,7 @@ public partial class ReplacementReviewWindow : Window
         _finalizationTransactionRepository = finalizationTransactionRepository;
         _finalizationPreparationService = finalizationPreparationService;
         _finalizationPromotionService = finalizationPromotionService;
+        _sourceRecycleService = sourceRecycleService;
         InitializeComponent();
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
@@ -85,6 +90,8 @@ public partial class ReplacementReviewWindow : Window
     public Exception? BackupCleanupFailure { get; private set; }
     public FinalizationPromotionResult? PromotionResult { get; private set; }
     public Exception? PromotionFailure { get; private set; }
+    public SourceRecycleResult? SourceRecycleResult { get; private set; }
+    public Exception? SourceRecycleFailure { get; private set; }
 
     private void ApplyPlan(ReplacementPlan plan)
     {
@@ -128,6 +135,7 @@ public partial class ReplacementReviewWindow : Window
             DiscardBackupButton.IsEnabled = false;
             CheckFinalizationButton.IsEnabled = false;
             PromoteFinalButton.IsEnabled = false;
+            RecycleSourceButton.IsEnabled = false;
             RecoveryStatusText.Visibility = Visibility.Collapsed;
             await _operationRepository.InitializeAsync();
             var operation = await _operationRepository.GetLatestForCompletedEncodeAsync(
@@ -178,6 +186,7 @@ public partial class ReplacementReviewWindow : Window
             DiscardBackupButton.IsEnabled = false;
             CheckFinalizationButton.IsEnabled = false;
             PromoteFinalButton.IsEnabled = false;
+            RecycleSourceButton.IsEnabled = false;
             if (updateCopyStatus)
             {
                 CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
@@ -252,14 +261,28 @@ public partial class ReplacementReviewWindow : Window
                 FinalizationCheckpoint.PromoteTemporaryIntentRecorded) &&
             !_copyInProgress &&
             !_backupInProgress &&
-            !_promotionInProgress;
+            !_promotionInProgress &&
+            !_sourceRecycleInProgress;
         PromoteFinalButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.PromoteTemporaryIntentRecorded
             ? "Recover promotion"
             : "Promote verified copy";
+        RecycleSourceButton.IsEnabled =
+            (finalizationTransaction?.Checkpoint is
+                FinalizationCheckpoint.FinalPromoted or
+                FinalizationCheckpoint.RecycleSourceIntentRecorded) &&
+            !_copyInProgress &&
+            !_backupInProgress &&
+            !_promotionInProgress &&
+            !_sourceRecycleInProgress;
+        RecycleSourceButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.RecycleSourceIntentRecorded
+            ? "Recover source recycle"
+            : "Recycle original source";
         FinalizationStatusText.Foreground = finalizationTransaction?.Checkpoint switch
         {
-            FinalizationCheckpoint.FinalPromoted => System.Windows.Media.Brushes.DarkGreen,
+            FinalizationCheckpoint.FinalPromoted or FinalizationCheckpoint.SourceRecycled => System.Windows.Media.Brushes.DarkGreen,
             FinalizationCheckpoint.PromoteTemporaryIntentRecorded when !string.IsNullOrWhiteSpace(finalizationTransaction.FailureMessage) =>
+                System.Windows.Media.Brushes.DarkRed,
+            FinalizationCheckpoint.RecycleSourceIntentRecorded when !string.IsNullOrWhiteSpace(finalizationTransaction.FailureMessage) =>
                 System.Windows.Media.Brushes.DarkRed,
             _ => System.Windows.Media.Brushes.Black
         };
@@ -271,7 +294,12 @@ public partial class ReplacementReviewWindow : Window
                 $"Promotion recovery is required (revision {finalizationTransaction.Revision}). " +
                 $"{finalizationTransaction.FailureMessage ?? "The current artifacts will be verified before continuing."}",
             FinalizationCheckpoint.FinalPromoted =>
-                "Final file promoted and verified. The original source and backup remain untouched; source recycling is disabled.",
+                "Final file promoted and verified. After separate confirmation, the verified original source can be moved to the Windows Recycle Bin.",
+            FinalizationCheckpoint.RecycleSourceIntentRecorded =>
+                $"Source recycling recovery is required (revision {finalizationTransaction.Revision}). " +
+                $"{finalizationTransaction.FailureMessage ?? "The source, backup, and final file will be checked before continuing."}",
+            FinalizationCheckpoint.SourceRecycled =>
+                "Original source moved to the Windows Recycle Bin. The verified backup and promoted final file remain untouched.",
             not null =>
                 $"Transaction checkpoint: {finalizationTransaction.Checkpoint} (revision {finalizationTransaction.Revision}). Further file execution is disabled.",
             _ when CheckFinalizationButton.IsEnabled =>
@@ -605,7 +633,7 @@ public partial class ReplacementReviewWindow : Window
                         FinalizationCheckpoint.PromoteTemporaryIntentRecorded;
             }
             FinalizationStatusText.Text = readiness.IsReady
-                ? $"READY — transaction checkpoint {_finalizationTransaction!.Checkpoint} was persisted. Atomic promotion is available; source actions remain disabled."
+                ? $"READY — transaction checkpoint {_finalizationTransaction!.Checkpoint} was persisted. Atomic promotion is available; source recycling requires a later separate confirmation."
                 : "BLOCKED — " + string.Join(" ", readiness.Issues.Select(issue => issue.Message));
             FinalizationStatusText.Foreground = readiness.IsReady
                 ? System.Windows.Media.Brushes.DarkGreen
@@ -669,7 +697,7 @@ public partial class ReplacementReviewWindow : Window
             PromotionResult = await _finalizationPromotionService.PromoteAsync(_recoveryOperation.Id);
             FinalizationStatusText.Text = PromotionResult.WasRecovered
                 ? "Promotion recovery verified the final file and recorded completion. The source and backup are unchanged."
-                : "Verified copy promoted atomically. The source and backup are unchanged; source recycling remains disabled.";
+                : "Verified copy promoted atomically. The source and backup are unchanged; source recycling now requires separate confirmation.";
             FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkGreen;
         }
         catch (Exception exception)
@@ -682,6 +710,67 @@ public partial class ReplacementReviewWindow : Window
         finally
         {
             _promotionInProgress = false;
+            await RefreshRecoveryStateAsync(updateCopyStatus: false);
+        }
+    }
+
+    private async void RecycleSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null ||
+            _finalizationTransaction is null ||
+            !RecycleSourceButton.IsEnabled ||
+            _sourceRecycleInProgress)
+        {
+            return;
+        }
+
+        var recovery = _finalizationTransaction.Checkpoint == FinalizationCheckpoint.RecycleSourceIntentRecorded;
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            (recovery
+                ? "Recover the interrupted source Recycle Bin operation?\n\n"
+                : "Move the verified original source to the Windows Recycle Bin?\n\n") +
+            $"Source: {_recoveryOperation.SourcePath}\n\n" +
+            $"Promoted final: {_recoveryOperation.FinalPath}\n" +
+            $"Verified backup: {_recoveryOperation.BackupPath}\n\n" +
+            "The source path will become empty, but Windows will retain the file in the Recycle Bin. " +
+            "If Windows cannot guarantee a Recycle Bin operation, the action fails instead of deleting permanently. " +
+            "The promoted final file and verified backup will not be changed.",
+            recovery ? "Recover source recycling" : "Recycle verified original source",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            FinalizationStatusText.Text = "Source recycling cancelled. No files or transaction checkpoints were changed.";
+            return;
+        }
+
+        _sourceRecycleInProgress = true;
+        SourceRecycleResult = null;
+        SourceRecycleFailure = null;
+        RecycleSourceButton.IsEnabled = false;
+        PromoteFinalButton.IsEnabled = false;
+        CheckFinalizationButton.IsEnabled = false;
+        FinalizationStatusText.Text = "Revalidating the source, backup, and final file before recording Recycle Bin intent...";
+        try
+        {
+            SourceRecycleResult = await _sourceRecycleService.RecycleAsync(_recoveryOperation.Id);
+            FinalizationStatusText.Text = SourceRecycleResult.WasRecovered
+                ? "Recovery verified that the source left its path and recorded source recycling. The backup and final file are unchanged."
+                : "Original source moved to the Windows Recycle Bin. The backup and promoted final file are unchanged.";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        }
+        catch (Exception exception)
+        {
+            SourceRecycleFailure = exception;
+            FinalizationStatusText.Text =
+                $"Source recycling stopped safely: {exception.Message} Recovery review will inspect the recorded checkpoint.";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
+        }
+        finally
+        {
+            _sourceRecycleInProgress = false;
             await RefreshRecoveryStateAsync(updateCopyStatus: false);
         }
     }
@@ -700,18 +789,20 @@ public partial class ReplacementReviewWindow : Window
 
     private void ReplacementReviewWindow_Closing(object? sender, CancelEventArgs e)
     {
-        if (!_copyInProgress && !_backupInProgress && !_promotionInProgress)
+        if (!_copyInProgress && !_backupInProgress && !_promotionInProgress && !_sourceRecycleInProgress)
         {
             return;
         }
 
-        if (_promotionInProgress)
+        if (_promotionInProgress || _sourceRecycleInProgress)
         {
             e.Cancel = true;
             System.Windows.MessageBox.Show(
                 this,
-                "Atomic promotion is being verified and cannot be cancelled safely. Wait for it to finish before closing.",
-                "Atomic promotion in progress",
+                _sourceRecycleInProgress
+                    ? "Source recycling is being verified and cannot be cancelled safely. Wait for it to finish before closing."
+                    : "Atomic promotion is being verified and cannot be cancelled safely. Wait for it to finish before closing.",
+                _sourceRecycleInProgress ? "Source recycling in progress" : "Atomic promotion in progress",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;

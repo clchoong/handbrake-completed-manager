@@ -1,6 +1,6 @@
 # Verified source restoration
 
-Source restoration is the first executable undo step. It reconstructs a missing original source from the verified backup before any later action may touch the promoted final file. The service is implemented and safety-tested as a backend recovery boundary; it is not yet exposed in the desktop interface because source recycling remains disabled.
+Source restoration is the first executable undo step. It reconstructs a missing original source from the verified backup before any later action may touch the promoted final file. The service is implemented and safety-tested as a backend recovery boundary; it is not yet exposed in the desktop interface.
 
 ## Preconditions
 
@@ -39,4 +39,4 @@ Failures after intent are written to the revisioned transaction journal. Recover
 
 ## Remaining safety boundary
 
-No desktop command currently starts undo or source restoration. Source recycling, final-file recycling, and transaction completion remain disabled. The next forward milestone must connect source retirement only after an explicit confirmation and must prove that this restoration path can recover every source-retirement crash boundary.
+No desktop command currently starts undo or source restoration. Guarded source recycling is implemented separately, but final-file recycling and transaction completion remain disabled. The next milestone must complete the forward transaction and make restart continuation record-specific without weakening the restoration boundary.

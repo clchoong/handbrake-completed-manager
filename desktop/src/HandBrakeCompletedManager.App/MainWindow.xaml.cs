@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
     private readonly FinalizationPreparationService _finalizationPreparationService;
     private readonly FinalizationPromotionService _finalizationPromotionService;
+    private readonly SourceRecycleService _sourceRecycleService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
@@ -69,6 +70,10 @@ public partial class MainWindow : Window
         _finalizationPromotionService = new FinalizationPromotionService(
             _replacementOperationRepository,
             _finalizationTransactionRepository);
+        _sourceRecycleService = new SourceRecycleService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository,
+            new WindowsRecycleBinService());
         _replacementRecoveryService = new ReplacementRecoveryService(
             _replacementOperationRepository,
             _originalBackupRepository,
@@ -583,12 +588,17 @@ public partial class MainWindow : Window
                 _finalizationReadinessService,
                 _finalizationTransactionRepository,
                 _finalizationPreparationService,
-                _finalizationPromotionService)
+                _finalizationPromotionService,
+                _sourceRecycleService)
             {
                 Owner = this
             };
             reviewWindow.ShowDialog();
-            StatusText.Text = reviewWindow.PromotionResult is not null
+            StatusText.Text = reviewWindow.SourceRecycleResult is not null
+                ? "Original source moved to the Windows Recycle Bin. The verified backup and promoted final file remain available."
+                : reviewWindow.SourceRecycleFailure is not null
+                    ? $"Source recycling requires recovery review: {reviewWindow.SourceRecycleFailure.Message}"
+                : reviewWindow.PromotionResult is not null
                 ? "Verified temporary copy promoted to its final path. The original source and backup remain untouched."
                 : reviewWindow.PromotionFailure is not null
                     ? $"Atomic promotion requires recovery review: {reviewWindow.PromotionFailure.Message}"
@@ -617,6 +627,7 @@ public partial class MainWindow : Window
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
                 reviewWindow.CopyFailure is not null ||
+                reviewWindow.SourceRecycleFailure is not null ||
                 reviewWindow.PromotionFailure is not null ||
                 reviewWindow.CleanupFailure is not null ||
                 reviewWindow.BackupFailure is not null ||
@@ -628,7 +639,9 @@ public partial class MainWindow : Window
                  !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
-                reviewWindow.PromotionResult is not null
+                reviewWindow.SourceRecycleResult is not null
+                    ? "The verified original source was moved to the Windows Recycle Bin."
+                : reviewWindow.PromotionResult is not null
                     ? "A verified temporary copy was atomically promoted; the source was unchanged."
                 : reviewWindow.CopyResult is not null
                     ? "A replacement temporary copy was created and verified."
