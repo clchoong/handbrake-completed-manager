@@ -113,6 +113,7 @@ The current Phase 1 implementation provides:
 - [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
+- [Version 0.4.0 release notes](docs/releases/v0.4.0.md): public-release highlights, installation boundary, and checksum
 - [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior
 - [Desktop UI design](docs/desktop-ui-design.md): visual system, information hierarchy, replacement experience, accessibility, and scaling behavior
 - [Publishing and independence](docs/publishing-and-independence.md): HandBrake relationship, GPL boundary, branding, and repository licensing decisions
