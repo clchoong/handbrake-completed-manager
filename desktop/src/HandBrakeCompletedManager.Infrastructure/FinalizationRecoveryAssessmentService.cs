@@ -19,12 +19,29 @@ public sealed class FinalizationRecoveryAssessmentService
 
         try
         {
+            var replacesSourceInPlace = PathsEqual(operation.SourcePath, operation.FinalPath);
+            var source = await ObserveAsync(operation.SourcePath, cancellationToken);
+            var final = replacesSourceInPlace
+                ? source
+                : await ObserveAsync(operation.FinalPath, cancellationToken);
+            if (replacesSourceInPlace)
+            {
+                if (Matches(source, transaction.SourceSha256))
+                {
+                    final = new FinalizationArtifactObservation(false);
+                }
+                else if (Matches(source, transaction.FinalSha256))
+                {
+                    source = new FinalizationArtifactObservation(false);
+                }
+            }
+
             var artifacts = new FinalizationArtifactSnapshot(
-                await ObserveAsync(operation.SourcePath, cancellationToken),
+                source,
                 await ObserveAsync(operation.TemporaryPath, cancellationToken),
-                await ObserveAsync(operation.FinalPath, cancellationToken),
+                final,
                 await ObserveAsync(operation.BackupPath, cancellationToken));
-            return FinalizationRecoveryAdvisor.Review(transaction, artifacts);
+            return FinalizationRecoveryAdvisor.Review(transaction, artifacts, replacesSourceInPlace);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -70,4 +87,10 @@ public sealed class FinalizationRecoveryAssessmentService
 
     private static FinalizationRecoveryDecision Manual(string message) =>
         new(false, FinalizationRecoveryAction.ManualReview, FinalizationCheckpoint.RecoveryRequired, message);
+
+    private static bool Matches(FinalizationArtifactObservation artifact, string sha256) =>
+        artifact.Exists && string.Equals(artifact.Sha256, sha256, StringComparison.OrdinalIgnoreCase);
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

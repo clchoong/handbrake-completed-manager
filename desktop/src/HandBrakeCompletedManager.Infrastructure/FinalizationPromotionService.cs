@@ -75,7 +75,19 @@ public sealed class FinalizationPromotionService(
             }
 
             await InvokeFaultPointAsync(FinalizationPromotionFaultPoint.AfterIntentPersisted);
-            File.Move(operation.TemporaryPath, operation.FinalPath);
+            if (PathsEqual(operation.SourcePath, operation.FinalPath))
+            {
+                // Windows ReplaceFile requires the source and destination handles to be
+                // closed. Both files were verified while locked immediately above, and
+                // the durable intent checkpoint makes an interruption recoverable.
+                await locks.DisposeAsync();
+                locks = null;
+                File.Replace(operation.TemporaryPath, operation.FinalPath, null, ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(operation.TemporaryPath, operation.FinalPath);
+            }
             if (File.Exists(operation.TemporaryPath) || !File.Exists(operation.FinalPath))
             {
                 throw new IOException("The atomic promotion did not produce the expected path state.");
@@ -206,19 +218,26 @@ public sealed class FinalizationPromotionService(
             FinalizationTransaction transaction,
             CancellationToken cancellationToken)
         {
-            EnsureUnoccupied(operation.FinalPath);
+            var replacesSourceInPlace = PathsEqual(operation.SourcePath, operation.FinalPath);
+            if (!replacesSourceInPlace)
+            {
+                EnsureUnoccupied(operation.FinalPath);
+            }
             FileStream? source = null;
             FileStream? backup = null;
             FileStream? temporary = null;
             try
             {
-                source = OpenReadLock(operation.SourcePath, allowRename: false);
+                source = OpenReadLock(operation.SourcePath, allowRename: replacesSourceInPlace);
                 backup = OpenReadLock(operation.BackupPath, allowRename: false);
                 temporary = OpenReadLock(operation.TemporaryPath, allowRename: true);
                 await VerifyAsync(source, operation.SourceSize, transaction.SourceSha256, "source", cancellationToken);
                 await VerifyAsync(backup, operation.SourceSize, transaction.SourceSha256, "original backup", cancellationToken);
                 await VerifyAsync(temporary, operation.DestinationSize, transaction.FinalSha256, "temporary copy", cancellationToken);
-                EnsureUnoccupied(operation.FinalPath);
+                if (!replacesSourceInPlace)
+                {
+                    EnsureUnoccupied(operation.FinalPath);
+                }
                 return new PromotionLocks(source, backup, temporary);
             }
             catch
@@ -240,14 +259,14 @@ public sealed class FinalizationPromotionService(
 
     private sealed class PromotedFileLocks : IAsyncDisposable
     {
-        private PromotedFileLocks(FileStream source, FileStream backup, FileStream final)
+        private PromotedFileLocks(FileStream? source, FileStream backup, FileStream final)
         {
             Source = source;
             Backup = backup;
             Final = final;
         }
 
-        private FileStream Source { get; }
+        private FileStream? Source { get; }
         private FileStream Backup { get; }
         private FileStream Final { get; }
 
@@ -266,12 +285,15 @@ public sealed class FinalizationPromotionService(
             FileStream? final = null;
             try
             {
-                source = OpenReadLock(operation.SourcePath, allowRename: false);
                 backup = OpenReadLock(operation.BackupPath, allowRename: false);
                 final = OpenReadLock(operation.FinalPath, allowRename: false);
-                await VerifyAsync(source, operation.SourceSize, transaction.SourceSha256, "source", cancellationToken);
                 await VerifyAsync(backup, operation.SourceSize, transaction.SourceSha256, "original backup", cancellationToken);
                 await VerifyAsync(final, operation.DestinationSize, transaction.FinalSha256, "promoted final file", cancellationToken);
+                if (!PathsEqual(operation.SourcePath, operation.FinalPath))
+                {
+                    source = OpenReadLock(operation.SourcePath, allowRename: false);
+                    await VerifyAsync(source, operation.SourceSize, transaction.SourceSha256, "source", cancellationToken);
+                }
                 return new PromotedFileLocks(source, backup, final);
             }
             catch
@@ -287,7 +309,7 @@ public sealed class FinalizationPromotionService(
         {
             await Final.DisposeAsync();
             await Backup.DisposeAsync();
-            await Source.DisposeAsync();
+            if (Source is not null) await Source.DisposeAsync();
         }
     }
 
@@ -326,4 +348,7 @@ public sealed class FinalizationPromotionService(
             throw new IOException($"The final path is occupied and will not be overwritten: {path}");
         }
     }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

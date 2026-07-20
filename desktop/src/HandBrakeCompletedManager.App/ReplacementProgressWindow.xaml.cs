@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using HandBrakeCompletedManager.Core;
 using HandBrakeCompletedManager.Infrastructure;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -19,16 +20,17 @@ public partial class ReplacementProgressWindow : Window
         _plan = plan ?? throw new ArgumentNullException(nameof(plan));
         _service = service ?? throw new ArgumentNullException(nameof(service));
         FileNameText.Text = Path.GetFileName(plan.CompletedEncode.SourcePath);
-        Loaded += ReplacementProgressWindow_Loaded;
+        ContentRendered += ReplacementProgressWindow_ContentRendered;
         Closing += ReplacementProgressWindow_Closing;
     }
 
     public SafeReplacementResult? Result { get; private set; }
     public Exception? Failure { get; private set; }
 
-    private async void ReplacementProgressWindow_Loaded(object sender, RoutedEventArgs e)
+    private async void ReplacementProgressWindow_ContentRendered(object? sender, EventArgs e)
     {
-        Loaded -= ReplacementProgressWindow_Loaded;
+        ContentRendered -= ReplacementProgressWindow_ContentRendered;
+        await Dispatcher.Yield(DispatcherPriority.ContextIdle);
         var progress = new Progress<SafeReplacementProgress>(UpdateProgress);
         try
         {
@@ -38,8 +40,9 @@ public partial class ReplacementProgressWindow : Window
             StageText.Text = "Replacement complete";
             ProgressText.Text = "Verified converted file installed beside the original location";
             PercentageText.Text = "100%";
-            OutcomeText.Text =
-                "Completed safely. The original source is in the Windows Recycle Bin and a verified backup remains available for Undo.";
+            OutcomeText.Text = PathsEqual(_plan.CompletedEncode.SourcePath, _plan.Paths.FinalPath)
+                ? "Completed safely. The converted file now occupies the original source path and a verified original backup remains available for recovery."
+                : "Completed safely. The original source is in the Windows Recycle Bin and a verified backup remains available for Undo.";
             OutcomeText.Foreground = MediaBrushes.DarkGreen;
         }
         catch (Exception exception)
@@ -98,4 +101,7 @@ public partial class ReplacementProgressWindow : Window
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

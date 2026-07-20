@@ -533,7 +533,7 @@ Warn when:
 * Another history record has the same source
 * The same source was converted more than once
 * Destination path matches the source path
-* Output extension is the same as source extension
+* Output extension matches the source extension; this uses a separately verified atomic in-place replacement path
 * The converted file has already replaced the source
 * A temporary file from a previous operation exists
 

@@ -147,7 +147,8 @@ public static class FinalizationRecoveryAdvisor
 {
     public static FinalizationRecoveryDecision Review(
         FinalizationTransaction transaction,
-        FinalizationArtifactSnapshot artifacts)
+        FinalizationArtifactSnapshot artifacts,
+        bool replacesSourceInPlace = false)
     {
         ArgumentNullException.ThrowIfNull(transaction);
         ArgumentNullException.ThrowIfNull(artifacts);
@@ -167,22 +168,27 @@ public static class FinalizationRecoveryAdvisor
             FinalizationCheckpoint.PromoteTemporaryIntentRecorded when source && temporary && !artifacts.Final.Exists =>
                 Safe(FinalizationRecoveryAction.RetryPromotion, FinalizationCheckpoint.PromoteTemporaryIntentRecorded,
                     "Promotion did not occur and could be retried."),
-            FinalizationCheckpoint.PromoteTemporaryIntentRecorded when source && !artifacts.Temporary.Exists && final =>
+            FinalizationCheckpoint.PromoteTemporaryIntentRecorded when
+                (source || replacesSourceInPlace) && !artifacts.Temporary.Exists && final =>
                 Safe(FinalizationRecoveryAction.RecordFinalPromoted, FinalizationCheckpoint.FinalPromoted,
                     "The atomic promotion occurred before interruption; its completed checkpoint can be recorded."),
-            FinalizationCheckpoint.FinalPromoted when final && !artifacts.Temporary.Exists && source =>
+            FinalizationCheckpoint.FinalPromoted when
+                final && !artifacts.Temporary.Exists && (source || replacesSourceInPlace) =>
                 Safe(FinalizationRecoveryAction.BeginSourceRecycle, FinalizationCheckpoint.RecycleSourceIntentRecorded,
                     "The final file is verified and the source is still present; source recycling could be prepared."),
             FinalizationCheckpoint.RecycleSourceIntentRecorded when final && !artifacts.Temporary.Exists && source =>
                 Safe(FinalizationRecoveryAction.RetrySourceRecycle, FinalizationCheckpoint.RecycleSourceIntentRecorded,
                     "Source recycling did not occur and could be retried."),
-            FinalizationCheckpoint.RecycleSourceIntentRecorded when final && !artifacts.Temporary.Exists && !artifacts.Source.Exists =>
+            FinalizationCheckpoint.RecycleSourceIntentRecorded when
+                final && !artifacts.Temporary.Exists && (!artifacts.Source.Exists || replacesSourceInPlace) =>
                 Safe(FinalizationRecoveryAction.RecordSourceRecycled, FinalizationCheckpoint.SourceRecycled,
                     "Source recycling occurred before interruption; its completed checkpoint can be recorded."),
-            FinalizationCheckpoint.SourceRecycled when final && !artifacts.Temporary.Exists && !artifacts.Source.Exists =>
+            FinalizationCheckpoint.SourceRecycled when
+                final && !artifacts.Temporary.Exists && (!artifacts.Source.Exists || replacesSourceInPlace) =>
                 Safe(FinalizationRecoveryAction.CompleteFinalization, FinalizationCheckpoint.Completed,
                     "All finalisation artifacts match and the transaction can be marked complete."),
-            FinalizationCheckpoint.Completed when final && !artifacts.Temporary.Exists && !artifacts.Source.Exists =>
+            FinalizationCheckpoint.Completed when
+                final && !artifacts.Temporary.Exists && (!artifacts.Source.Exists || replacesSourceInPlace) =>
                 Safe(FinalizationRecoveryAction.BeginUndo, FinalizationCheckpoint.UndoPrepared,
                     "The completed transaction is consistent; a separately confirmed undo could be prepared."),
             FinalizationCheckpoint.UndoPrepared when !artifacts.Source.Exists && final =>

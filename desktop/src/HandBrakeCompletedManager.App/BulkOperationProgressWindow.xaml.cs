@@ -7,6 +7,7 @@ namespace HandBrakeCompletedManager.App;
 public partial class BulkOperationProgressWindow : Window
 {
     private bool _isRunning = true;
+    private readonly TaskCompletionSource _rendered = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public BulkOperationProgressWindow(string title, string heading, string subtitle)
     {
@@ -15,7 +16,10 @@ public partial class BulkOperationProgressWindow : Window
         HeadingText.Text = heading;
         SubtitleText.Text = subtitle;
         Closing += BulkOperationProgressWindow_Closing;
+        ContentRendered += (_, _) => _rendered.TrySetResult();
     }
+
+    public Task WaitUntilRenderedAsync() => _rendered.Task;
 
     public void Report(int completed, int total, string item)
     {

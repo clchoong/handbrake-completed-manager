@@ -32,6 +32,21 @@ public sealed class FinalizationRecoveryAssessmentServiceTests
     }
 
     [Fact]
+    public async Task ReviewAsync_RecognizesInPlacePromotionCompletedBeforeCheckpointWrite()
+    {
+        using var fixture = await ArtifactFixture.CreateAsync(
+            FinalizationCheckpoint.PromoteTemporaryIntentRecorded,
+            keepTemporary: false,
+            createFinal: true,
+            inPlace: true);
+
+        var decision = await new FinalizationRecoveryAssessmentService().ReviewAsync(fixture.Operation, fixture.Transaction);
+
+        Assert.True(decision.IsConsistent);
+        Assert.Equal(FinalizationRecoveryAction.RecordFinalPromoted, decision.Action);
+    }
+
+    [Fact]
     public async Task ReviewAsync_RefusesCorruptedBackup()
     {
         using var fixture = await ArtifactFixture.CreateAsync(FinalizationCheckpoint.Prepared, keepTemporary: true, createFinal: false);
@@ -72,13 +87,14 @@ public sealed class FinalizationRecoveryAssessmentServiceTests
         public static async Task<ArtifactFixture> CreateAsync(
             FinalizationCheckpoint checkpoint,
             bool keepTemporary,
-            bool createFinal)
+            bool createFinal,
+            bool inPlace = false)
         {
             var directory = Path.Combine(Path.GetTempPath(), $"hbcm-recovery-assessment-{Guid.NewGuid():N}");
             System.IO.Directory.CreateDirectory(directory);
             var sourcePath = Path.Combine(directory, "source.mkv");
             var temporaryPath = Path.Combine(directory, "source.mp4.hbcm-copying");
-            var finalPath = Path.Combine(directory, "source.mp4");
+            var finalPath = inPlace ? sourcePath : Path.Combine(directory, "source.mp4");
             var backupPath = Path.Combine(directory, "backup", "source.mkv");
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
             var sourceBytes = Enumerable.Range(0, 2_048).Select(value => (byte)(value % 251)).ToArray();

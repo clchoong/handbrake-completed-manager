@@ -33,7 +33,7 @@ public sealed class FinalizationReadinessService
             "TemporaryNotVerified", "The converted temporary copy is not marked verified.", issues);
         AddWhen(backup.Status != OriginalBackupStatus.Verified || string.IsNullOrWhiteSpace(backup.Sha256),
             "BackupNotVerified", "The original-backup copy is not marked verified with a SHA-256 digest.", issues);
-        AddWhen(PathExists(operation.FinalPath),
+        AddWhen(PathExists(operation.FinalPath) && !PathsEqual(operation.SourcePath, operation.FinalPath),
             "FinalPathConflict", "A file or directory already occupies the planned final path.", issues);
 
         var source = ReadFile(operation.SourcePath);

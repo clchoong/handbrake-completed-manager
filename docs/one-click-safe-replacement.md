@@ -12,11 +12,11 @@ The coordinator runs the existing safety services in this fixed order:
 2. Copy the HandBrake output to the deterministic temporary path and verify its size and SHA-256 digest.
 3. Copy the original source to the deterministic backup path and verify its size and SHA-256 digest.
 4. Revalidate every persisted state, path, size, timestamp, and digest.
-5. Persist the finalisation journal and atomically promote the temporary copy without overwriting a file.
-6. Revalidate the source, backup, and promoted final, then move the original source to the Windows Recycle Bin.
+5. Persist the finalisation journal and atomically promote the temporary copy. For differing extensions, this creates an unoccupied final path; for matching extensions, Windows atomically replaces the verified original path.
+6. Revalidate the source, backup, and promoted final. When the final path differs, move the original source to the Windows Recycle Bin; an in-place replacement instead retains the verified original backup for recovery.
 7. Verify the final and backup again and atomically complete the database transaction.
 
-The original HandBrake output remains at its recorded output path. The promoted copy is placed beside the former source under the planned final filename. The verified original backup remains available for later undo.
+The original HandBrake output remains at its recorded output path. The promoted copy occupies the planned source-library filename, including the original path when both extensions match. The verified original backup remains available for recovery.
 
 ## Failure and recovery behavior
 
@@ -24,7 +24,7 @@ Before the finalisation journal is created, a copy or verification failure retai
 
 The workflow never:
 
-- Overwrites an occupied final, temporary, or backup path.
+- Overwrites an unrelated occupied final, temporary, or backup path.
 - Permanently deletes the original source.
 - Removes the source before the converted copy and original backup are independently verified.
 - Treats a missing file as a successful transition without the matching persisted intent.

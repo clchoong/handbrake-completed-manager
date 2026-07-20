@@ -36,6 +36,11 @@ public sealed class SourceRecycleService(
             ?? throw new InvalidOperationException("A finalisation transaction is required before source recycling.");
         ValidateOperation(operation, transaction);
 
+        if (PathsEqual(operation.SourcePath, operation.FinalPath))
+        {
+            return await CompleteInPlaceReplacementAsync(operation, transaction, cancellationToken);
+        }
+
         if (transaction.Checkpoint == FinalizationCheckpoint.RecycleSourceIntentRecorded &&
             !File.Exists(operation.SourcePath) &&
             !Directory.Exists(operation.SourcePath))
@@ -201,12 +206,62 @@ public sealed class SourceRecycleService(
         var backup = Path.GetFullPath(operation.BackupPath);
         var final = Path.GetFullPath(operation.FinalPath);
         if (string.Equals(source, backup, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, final, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(backup, final, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Source recycling requires distinct source, backup, and final paths.");
+            throw new InvalidOperationException("Source replacement requires distinct backup and final paths.");
         }
     }
+
+    private async Task<SourceRecycleResult> CompleteInPlaceReplacementAsync(
+        ReplacementOperation operation,
+        FinalizationTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        if (transaction.Checkpoint is not (
+                FinalizationCheckpoint.FinalPromoted or
+                FinalizationCheckpoint.RecycleSourceIntentRecorded))
+        {
+            throw new InvalidOperationException($"In-place replacement is unavailable at checkpoint {transaction.Checkpoint}.");
+        }
+
+        await using var backup = OpenReadLock(operation.BackupPath, allowRecycle: false);
+        await using var final = OpenReadLock(operation.FinalPath, allowRecycle: false);
+        await VerifyAsync(backup, operation.SourceSize, transaction.SourceSha256, "original backup", cancellationToken);
+        await VerifyAsync(final, operation.DestinationSize, transaction.FinalSha256, "replacement file", cancellationToken);
+
+        var active = transaction;
+        if (transaction.Checkpoint == FinalizationCheckpoint.FinalPromoted)
+        {
+            if (!await transactionRepository.TryTransitionAsync(
+                    operation.Id, transaction.Checkpoint, transaction.Revision,
+                    FinalizationCheckpoint.RecycleSourceIntentRecorded, null,
+                    DateTimeOffset.UtcNow, cancellationToken))
+            {
+                throw new InvalidOperationException("The transaction changed before in-place replacement could be recorded.");
+            }
+
+            active = transaction with
+            {
+                Checkpoint = FinalizationCheckpoint.RecycleSourceIntentRecorded,
+                Revision = transaction.Revision + 1,
+                FailureMessage = null,
+                DateUpdatedUtc = DateTimeOffset.UtcNow
+            };
+        }
+
+        if (!await transactionRepository.TryTransitionAsync(
+                operation.Id, active.Checkpoint, active.Revision,
+                FinalizationCheckpoint.SourceRecycled, null,
+                DateTimeOffset.UtcNow, cancellationToken))
+        {
+            throw new InvalidOperationException("The in-place replacement completed, but its checkpoint could not be recorded.");
+        }
+
+        return new SourceRecycleResult(operation.Id, operation.SourcePath, false);
+    }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
     private static FileStream OpenReadLock(string path, bool allowRecycle) => new(
         path,

@@ -116,15 +116,7 @@ public static class ReplacementPlanner
             "The source and converted paths refer to the same file.",
             issues);
         AddBlockingWhen(
-            string.Equals(
-                Path.GetExtension(completedEncode.SourcePath),
-                Path.GetExtension(completedEncode.DestinationPath),
-                StringComparison.OrdinalIgnoreCase),
-            "SameExtension",
-            "Source replacement with the same file extension is not supported.",
-            issues);
-        AddBlockingWhen(
-            snapshot.FinalPathExists,
+            snapshot.FinalPathExists && !PathsEqual(completedEncode.SourcePath, paths.FinalPath),
             "FinalPathConflict",
             "A file or folder already exists at the planned final path.",
             issues);

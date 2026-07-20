@@ -1,11 +1,11 @@
 # Release readiness
 
-Version 0.7.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.7.1 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
 - The complete Release solution build succeeded with zero warnings and zero errors.
-- All 221 automated tests passed: 94 core, 65 infrastructure, and 62 finalisation tests.
+- All 224 automated tests passed: 95 core, 65 infrastructure, and 64 finalisation tests.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
@@ -26,15 +26,17 @@ Version 0.7.0 was validated as a self-contained Windows x64 open-source release 
 - Real-log read-only validation parsed all 94 successful completion logs in the local sample set and correctly separated existing from missing outputs.
 - Tray Exit no longer synchronously waits for logging on the UI thread, and history removal performs SQLite work away from the interface thread.
 - The normal source-replacement path uses one exact-path warning followed by a dedicated overall progress window; detailed transaction controls remain available through Recovery.
-- Bulk history removal yields for dialog rendering, then shows current-item and overall progress in a separate responsive window until final totals are available.
+- Same-extension replacement atomically installs the verified converted copy at the original source path while retaining the recorded HandBrake output and verified original backup.
+- Replacement and bulk-history progress windows wait for their first completed render before work starts, preventing a transparent or apparently frozen initial state.
+- Bulk history removal shows current-item and overall progress in a separate responsive window until final totals are available.
 - Settings content scrolls independently of its footer, keeping diagnostic-log controls reachable at smaller sizes and display scaling.
 - The About window reports the packaged assembly version, MIT licence, independence notice, platform, runtime, architecture, storage boundary, and project links.
-- Packaged executable metadata reports product version `0.7.0`, company `clchoong`, and the expected copyright.
+- Packaged executable metadata reports product version `0.7.1`, company `clchoong`, and the expected copyright.
 
-The validated archive is `HandBrake-Completed-Manager-0.7.0-win-x64.zip`. Its size is 116,214,145 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.7.1-win-x64.zip`. Its size is 116,216,331 bytes and its SHA-256 checksum is:
 
 ```text
-22C94776C216F941B048949BEAA54A3A8C99825E8CA25B9F824DB76DAD231C4B
+30B4579AA5EC140645A7ED1A365ABC54EC15531E3E3E052997F36F29E0CF6FE3
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -56,7 +58,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.7.0
+.\scripts\publish-portable.ps1 -Version 0.7.1
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

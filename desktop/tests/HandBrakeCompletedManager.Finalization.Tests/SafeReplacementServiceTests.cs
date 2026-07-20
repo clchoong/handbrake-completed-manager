@@ -57,6 +57,27 @@ public sealed class SafeReplacementServiceTests
         Assert.Single(await fixture.CreateRecoveryService().ReviewAsync());
     }
 
+    [Fact]
+    public async Task ReplaceAsync_SameExtensionAtomicallyReplacesOriginalPath()
+    {
+        using var fixture = await SafeReplacementFixture.CreateAsync(sameExtension: true);
+        var recycler = new TestRecycler();
+
+        var result = await fixture.CreateService(recycler).ReplaceAsync(fixture.Plan);
+
+        Assert.Equal(fixture.Plan.CompletedEncode.SourcePath, result.FinalPath, ignoreCase: true);
+        Assert.Equal(fixture.ConvertedBytes, await File.ReadAllBytesAsync(result.FinalPath));
+        Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.Plan.Paths.BackupPath));
+        Assert.Equal(fixture.ConvertedBytes, await File.ReadAllBytesAsync(fixture.Plan.CompletedEncode.DestinationPath));
+        Assert.False(File.Exists(fixture.Plan.Paths.TemporaryPath));
+        Assert.Equal(0, recycler.CallCount);
+
+        var operation = await fixture.OperationRepository.GetByIdAsync(result.OperationId);
+        var transaction = await fixture.TransactionRepository.GetAsync(result.OperationId);
+        Assert.Equal(ReplacementOperationStatus.Completed, operation?.Status);
+        Assert.Equal(FinalizationCheckpoint.Completed, transaction?.Checkpoint);
+    }
+
     private sealed class RecordingProgress : IProgress<SafeReplacementProgress>
     {
         public List<SafeReplacementProgress> Items { get; } = [];
@@ -142,7 +163,7 @@ public sealed class SafeReplacementServiceTests
         public ReplacementRecoveryService CreateRecoveryService() =>
             new(OperationRepository, BackupRepository, TransactionRepository);
 
-        public static async Task<SafeReplacementFixture> CreateAsync()
+        public static async Task<SafeReplacementFixture> CreateAsync(bool sameExtension = false)
         {
             var directory = Path.Combine(Path.GetTempPath(), $"hbcm-one-click-{Guid.NewGuid():N}");
             var sourceDirectory = Path.Combine(directory, "source");
@@ -150,7 +171,8 @@ public sealed class SafeReplacementServiceTests
             System.IO.Directory.CreateDirectory(sourceDirectory);
             System.IO.Directory.CreateDirectory(convertedDirectory);
             var sourcePath = Path.Combine(sourceDirectory, "sample.mkv");
-            var destinationPath = Path.Combine(convertedDirectory, "sample.mp4");
+            var destinationExtension = sameExtension ? ".mkv" : ".mp4";
+            var destinationPath = Path.Combine(convertedDirectory, $"sample{destinationExtension}");
             var sourceBytes = Enumerable.Range(0, 16_384).Select(value => (byte)(value % 251)).ToArray();
             var convertedBytes = Enumerable.Range(0, 8_192).Select(value => (byte)(value % 239)).ToArray();
             await File.WriteAllBytesAsync(sourcePath, sourceBytes);
@@ -165,7 +187,7 @@ public sealed class SafeReplacementServiceTests
             var encode = new CompletedEncode(
                 Guid.NewGuid(), $"ONECLICK-{Guid.NewGuid():N}", now,
                 sourcePath, "sample.mkv", ".mkv", sourceBytes.Length, true,
-                destinationPath, "sample.mp4", ".mp4", convertedBytes.Length, true,
+                destinationPath, Path.GetFileName(destinationPath), destinationExtension, convertedBytes.Length, true,
                 File.GetLastWriteTimeUtc(destinationPath), 50, 50,
                 sourceBytes.Length - convertedBytes.Length,
                 0, "Completed", now, now);

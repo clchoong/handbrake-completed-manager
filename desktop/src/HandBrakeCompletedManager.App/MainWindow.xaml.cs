@@ -880,8 +880,9 @@ public partial class MainWindow : Window
 
             if (progressWindow.Result is not null)
             {
-                StatusText.Text =
-                    "Source replacement completed. The converted file is beside the original location and the original is in the Windows Recycle Bin.";
+                StatusText.Text = PathsEqual(row.SourcePath, plan.Paths.FinalPath)
+                    ? "Source replacement completed. The converted file now occupies the original source path; a verified original backup was retained."
+                    : "Source replacement completed. The converted file is beside the original location and the original is in the Windows Recycle Bin.";
                 _ = _logger.LogAsync(
                     DiagnosticLogLevel.Information,
                     "The simplified source replacement workflow completed atomically.");
@@ -1438,7 +1439,9 @@ public partial class MainWindow : Window
             Owner = this
         };
         progressWindow.Show();
-        await Dispatcher.Yield(DispatcherPriority.Render);
+        progressWindow.Activate();
+        await progressWindow.WaitUntilRenderedAsync();
+        await Dispatcher.Yield(DispatcherPriority.ContextIdle);
         BeginBulkOperation();
         var succeeded = 0;
         var failures = new List<string>();
@@ -1657,6 +1660,9 @@ public partial class MainWindow : Window
 
         return $"{size:0.##} {units[unitIndex]}";
     }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }
 
 internal sealed record BulkReplacementCandidate(

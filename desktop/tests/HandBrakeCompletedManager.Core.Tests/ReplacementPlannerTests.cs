@@ -69,7 +69,7 @@ public sealed class ReplacementPlannerTests
     }
 
     [Fact]
-    public void Create_BlocksSameFileAndSameExtension()
+    public void Create_BlocksWhenSourceAndDestinationAreTheSameFile()
     {
         var record = CreateRecord() with
         {
@@ -84,7 +84,25 @@ public sealed class ReplacementPlannerTests
 
         Assert.False(plan.CanProceed);
         Assert.Contains(plan.Issues, issue => issue.Code == "SameFile");
-        Assert.Contains(plan.Issues, issue => issue.Code == "SameExtension");
+    }
+
+    [Fact]
+    public void Create_AllowsDifferentFilesWithSameExtensionAndTargetsOriginalPath()
+    {
+        var record = CreateRecord() with
+        {
+            DestinationPath = @"E:\Converted\Output.mkv",
+            DestinationFilename = "Output.mkv",
+            DestinationExtension = ".mkv"
+        };
+
+        var plan = ReplacementPlanner.Create(
+            record,
+            new ReplacementPreflightSnapshot(true, 1_000, true, 400, true, false));
+
+        Assert.True(plan.CanProceed);
+        Assert.Empty(plan.Issues);
+        Assert.Equal(record.SourcePath, plan.Paths.FinalPath, ignoreCase: true);
     }
 
     [Fact]

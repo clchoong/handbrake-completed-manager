@@ -248,8 +248,8 @@ public sealed class OriginalBackupService(
             new FileInfo(operation.SourcePath).Length != operation.SourceSize ||
             !File.Exists(operation.TemporaryPath) ||
             new FileInfo(operation.TemporaryPath).Length != operation.DestinationSize ||
-            File.Exists(operation.FinalPath) ||
-            Directory.Exists(operation.FinalPath) ||
+            (!PathsEqual(operation.SourcePath, operation.FinalPath) &&
+             (File.Exists(operation.FinalPath) || Directory.Exists(operation.FinalPath))) ||
             File.Exists(operation.BackupPath) ||
             Directory.Exists(operation.BackupPath) ||
             (plan.CompletedEncode.SourceSize is not null &&

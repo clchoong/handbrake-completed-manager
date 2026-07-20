@@ -32,13 +32,15 @@ public sealed class FinalizationCompletionService(
         var committed = false;
         try
         {
-            EnsureUnoccupied(operation.SourcePath, "source");
             EnsureUnoccupied(operation.TemporaryPath, "temporary copy");
             await using var backup = OpenReadLock(operation.BackupPath);
             await using var final = OpenReadLock(operation.FinalPath);
             await VerifyAsync(backup, operation.SourceSize, transaction.SourceSha256, "original backup", cancellationToken);
             await VerifyAsync(final, operation.DestinationSize, transaction.FinalSha256, "promoted final file", cancellationToken);
-            EnsureUnoccupied(operation.SourcePath, "source");
+            if (!PathsEqual(operation.SourcePath, operation.FinalPath))
+            {
+                EnsureUnoccupied(operation.SourcePath, "source");
+            }
             EnsureUnoccupied(operation.TemporaryPath, "temporary copy");
 
             if (transaction.Checkpoint == FinalizationCheckpoint.Completed)
@@ -116,10 +118,13 @@ public sealed class FinalizationCompletionService(
         var temporary = Path.GetFullPath(operation.TemporaryPath);
         var backup = Path.GetFullPath(operation.BackupPath);
         var final = Path.GetFullPath(operation.FinalPath);
-        var paths = new[] { source, temporary, backup, final };
-        if (paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() != paths.Length)
+        if (string.Equals(temporary, source, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(temporary, backup, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(temporary, final, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(backup, source, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(backup, final, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Forward completion requires distinct source, temporary, backup, and final paths.");
+            throw new InvalidOperationException("Forward completion requires distinct temporary, backup, and final paths.");
         }
     }
 
@@ -158,4 +163,7 @@ public sealed class FinalizationCompletionService(
             throw new IOException($"The {artifactName} path must be empty before finalisation can complete: {path}");
         }
     }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

@@ -21,7 +21,6 @@ Replacement preparation cannot start when:
 - The source or converted file is missing.
 - Either file is empty or its size cannot be read.
 - The source and converted paths refer to the same file.
-- The source and converted extensions are the same.
 - A file or directory already occupies the planned final path.
 - A previous temporary-copy path already exists.
 - A file or directory already occupies the planned original-backup path.
@@ -30,6 +29,8 @@ Replacement preparation cannot start when:
 - The converted file modification time differs from the time recorded at encode completion.
 
 A converted file larger than the source produces a warning rather than silently appearing safe.
+
+When source and output extensions match, the planned final path is the original source path. That existing path is expected and is not treated as an unrelated-file conflict. The guarded workflow verifies the converted temporary copy and original backup before using the Windows atomic file-replacement operation.
 
 ## Persistent recovery state
 
