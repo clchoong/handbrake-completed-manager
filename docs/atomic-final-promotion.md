@@ -36,4 +36,4 @@ The main Recovery overview identifies operations with a finalisation journal and
 
 ## Remaining safety boundary
 
-After promotion, the source and backup remain present and verified. Source recycling, replacement completion, source restoration, final-file recycling, and undo execution are disabled.
+After promotion, the source and backup remain present and verified. A guarded source-restoration backend now exists for future undo recovery, but it is not reachable while source recycling remains disabled. Replacement completion, final-file recycling, and desktop undo execution remain disabled.

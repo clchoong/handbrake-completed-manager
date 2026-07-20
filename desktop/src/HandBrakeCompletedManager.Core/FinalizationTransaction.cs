@@ -33,6 +33,13 @@ public sealed record FinalizationPromotionResult(
     string Sha256,
     bool WasRecovered);
 
+public sealed record SourceRestorationResult(
+    Guid OperationId,
+    string SourcePath,
+    string Sha256,
+    bool WasRecovered,
+    bool WasResumed);
+
 public static class FinalizationStateMachine
 {
     private static readonly IReadOnlyDictionary<FinalizationCheckpoint, IReadOnlySet<FinalizationCheckpoint>> Transitions =

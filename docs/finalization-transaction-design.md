@@ -1,6 +1,6 @@
 # Finalisation transaction design
 
-Finalisation and undo are modelled as revisioned, durable transactions. Atomic temporary-to-final promotion is the only enabled file transition; all source and undo transitions remain disabled.
+Finalisation and undo are modelled as revisioned, durable transactions. Atomic temporary-to-final promotion is enabled in the desktop review. Verified source restoration is implemented and tested as a backend recovery boundary, but it is not exposed while source recycling remains disabled.
 
 ## Preparation boundary
 
@@ -35,7 +35,7 @@ Undo prioritises restoring the original before touching the promoted file:
 | `SourceRestored` | `RecycleFinalIntentRecorded` | `FinalRecycled` |
 | `FinalRecycled` | — | `Undone` |
 
-If the source is already present and matches its prepared digest, restoration can be skipped. A future restore executor must create and verify the source from the backup before the final file can be recycled.
+If the source is already present and matches its prepared digest, restoration can be skipped. The restore executor creates a deterministic same-directory artifact, safely resumes only a byte-for-byte matching partial copy, verifies the completed source digest, and atomically renames it to an unoccupied source path. The final file cannot be recycled until the journal records `SourceRestored`.
 
 ## Crash-boundary assessment
 
@@ -50,4 +50,4 @@ The verified backup is mandatory throughout forward and undo recovery. Every leg
 
 ## Current execution boundary
 
-The desktop review may advance `Prepared` through `PromoteTemporaryIntentRecorded` to `FinalPromoted` by the guarded process documented in [Atomic final-file promotion](atomic-final-promotion.md). No service recycles the source, restores the source, recycles the final file, or marks finalisation/undo complete.
+The desktop review may advance `Prepared` through `PromoteTemporaryIntentRecorded` to `FinalPromoted` by the guarded process documented in [Atomic final-file promotion](atomic-final-promotion.md). The backend restoration process documented in [Verified source restoration](source-restoration.md) may advance a prepared undo through `RestoreSourceIntentRecorded` to `SourceRestored`, but no desktop command can currently initiate it. No service recycles the source, recycles the final file, or marks finalisation/undo complete.
