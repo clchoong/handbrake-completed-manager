@@ -35,6 +35,41 @@ public sealed record ReplacementPlan(
     public bool CanProceed => Issues.All(issue => issue.Severity != ReplacementIssueSeverity.Blocking);
 }
 
+public sealed record BulkReplacementReviewItem(
+    ReplacementPlan Plan,
+    IReadOnlyList<ReplacementIssue> Issues)
+{
+    public bool CanProceed => Issues.All(issue => issue.Severity != ReplacementIssueSeverity.Blocking);
+}
+
+public static class BulkReplacementPlanner
+{
+    public static IReadOnlyList<BulkReplacementReviewItem> Review(IEnumerable<ReplacementPlan> plans)
+    {
+        ArgumentNullException.ThrowIfNull(plans);
+        var planList = plans.ToArray();
+        var duplicateFinalPaths = planList
+            .GroupBy(plan => Path.GetFullPath(plan.Paths.FinalPath), StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return planList.Select(plan =>
+        {
+            var issues = plan.Issues.ToList();
+            if (duplicateFinalPaths.Contains(Path.GetFullPath(plan.Paths.FinalPath)))
+            {
+                issues.Add(new ReplacementIssue(
+                    "BulkFinalPathConflict",
+                    ReplacementIssueSeverity.Blocking,
+                    "Another selected source resolves to the same final path."));
+            }
+
+            return new BulkReplacementReviewItem(plan, issues);
+        }).ToArray();
+    }
+}
+
 public static class ReplacementPlanner
 {
     public const string TemporarySuffix = ".hbcm-copying";

@@ -1,11 +1,11 @@
 # Release readiness
 
-Version 0.4.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.5.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
 - The complete Release solution build succeeded with zero warnings and zero errors.
-- All 212 automated tests passed: 87 core, 63 infrastructure, and 62 finalisation tests.
+- All 215 automated tests passed: 90 core, 63 infrastructure, and 62 finalisation tests.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
@@ -18,11 +18,14 @@ Version 0.4.0 was validated as a self-contained Windows x64 open-source release 
 - The archive contains no generated history, settings, logs, private developer metadata, or local paths outside the portable guide's generic examples.
 - Output-recycling tests cover captured-file verification, unfinished-replacement refusal, Recycle Bin failure, source retention, and retained history.
 - Replacement-state tests verify the terminal **Replaced** and **Restored** indicators from durable finalisation checkpoints.
+- Extended row selection supports Ctrl-click, Shift-click, Ctrl+A, selecting all filtered rows, and clearing the selection.
+- Bulk source replacement preflights every record and blocks selected records that resolve to the same final path before confirmation.
+- Bulk source replacement, output recycling, and history removal execute sequentially, allow stopping between records, and report succeeded, failed, and skipped totals.
 
-The validated archive is `HandBrake-Completed-Manager-0.4.0-win-x64.zip`. Its size is 116,175,330 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.5.0-win-x64.zip`. Its size is 116,187,677 bytes and its SHA-256 checksum is:
 
 ```text
-536872C6F1B6C4957117567351176813BC4DBAE6CE62DBAE57D533ADE865A854
+11B5B0C273BBE5541F14B11E2C1663C54CEC78BEAEC6E5C94ED136F179963BEB
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -44,7 +47,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.4.0
+.\scripts\publish-portable.ps1 -Version 0.5.0
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

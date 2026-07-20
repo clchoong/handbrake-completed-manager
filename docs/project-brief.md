@@ -493,7 +493,7 @@ For replaced records, display:
 
 ## Bulk actions
 
-Allow selecting multiple records in a deliberate bulk-management mode. Single-record selection remains the default so that ordinary playback, reveal, and replacement actions are unambiguous.
+Allow extended row selection through Ctrl-click, Shift-click, Ctrl+A, **Select all shown**, and **Clear selection**. Ordinary playback, reveal, details, and the advanced replacement/recovery window remain available only when exactly one record is selected.
 
 Bulk actions:
 
@@ -518,6 +518,8 @@ Do not run many destructive file replacements simultaneously by default.
 Bulk output recycling must verify every selected record before changing files, present the exact affected paths and eligibility failures, require one explicit confirmation, and report a per-item result. It must never fall back to permanent deletion.
 
 Bulk source replacement is a separate managed workflow rather than a loop around the single-record dialog. It requires sequential execution, durable per-record progress, cancellation between records, restart recovery, and a final succeeded/skipped/failed summary.
+
+Implemented bulk file actions display every selected source and target, skip initial preflight failures, block duplicate final paths across the selection, execute records sequentially, expose **Stop after current**, continue after a record-specific safe failure, and present a final result summary.
 
 ## Duplicate and conflict detection
 

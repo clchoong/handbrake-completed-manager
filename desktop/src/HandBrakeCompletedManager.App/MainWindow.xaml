@@ -277,6 +277,17 @@
                                     <ComboBoxItem Tag="OutputLargerThanSource" Content="Output larger than source" />
                                 </ComboBox>
                                 <Button Style="{StaticResource CompactButtonStyle}" Click="ClearHistoryFiltersButton_Click" Content="Clear" />
+                                <Button x:Name="SelectAllShownButton"
+                                        Margin="8,0,0,0"
+                                        Style="{StaticResource CompactButtonStyle}"
+                                        Click="SelectAllShownButton_Click"
+                                        Content="Select all shown" />
+                                <Button x:Name="ClearSelectionButton"
+                                        Margin="6,0,0,0"
+                                        Style="{StaticResource CompactButtonStyle}"
+                                        Click="ClearSelectionButton_Click"
+                                        Content="Clear selection"
+                                        IsEnabled="False" />
                                 <TextBlock x:Name="ResultsCountText"
                                            Margin="14,0,0,0"
                                            VerticalAlignment="Center"
@@ -312,7 +323,12 @@
                                     <Button x:Name="RevealDestinationButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="RevealDestinationButton_Click" Content="Show output" IsEnabled="False" />
                                     <Button x:Name="RevealSourceButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="RevealSourceButton_Click" Content="Show source" IsEnabled="False" />
                                     <Button x:Name="RecycleOutputButton" Margin="0,0,6,0" Style="{StaticResource DangerButtonStyle}" Click="RecycleOutputButton_Click" Content="Recycle output" IsEnabled="False" />
-                                    <Button x:Name="RemoveHistoryButton" Style="{StaticResource CompactButtonStyle}" Click="RemoveHistoryButton_Click" Content="Remove history" IsEnabled="False" />
+                                    <Button x:Name="RemoveHistoryButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="RemoveHistoryButton_Click" Content="Remove history" IsEnabled="False" />
+                                    <Button x:Name="StopBulkButton"
+                                            Style="{StaticResource SoftAccentButtonStyle}"
+                                            Click="StopBulkButton_Click"
+                                            Content="Stop after current"
+                                            Visibility="Collapsed" />
                                 </WrapPanel>
                             </Grid>
                         </Border>
@@ -323,7 +339,8 @@
                                   AutoGenerateColumns="False"
                                   IsReadOnly="True"
                                   CanUserAddRows="False"
-                                  SelectionMode="Single"
+                                  SelectionMode="Extended"
+                                  SelectionUnit="FullRow"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
                                   PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">

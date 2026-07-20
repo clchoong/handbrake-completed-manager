@@ -20,7 +20,9 @@ The visible-result count updates whenever search text, a quick filter, or histor
 
 Select any column heading to sort the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
 
-Selecting a row displays its completion time, status, source-replacement state, full source and output paths, size comparison, exit code, and captured file-availability state. The selected record remains selected during automatic history refresh when it still matches the active filter.
+Selecting one row displays its completion time, status, source-replacement state, full source and output paths, size comparison, exit code, and captured file-availability state. Selected records remain selected during automatic history refresh when they still match the active filter.
+
+Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
 
 The **Source replacement** column reports **Not replaced**, **In progress**, **Needs attention**, **✓ Replaced**, or **Restored** from the latest durable replacement operation and finalisation checkpoint. The check mark appears only after forward replacement has completed atomically.
 
@@ -58,3 +60,13 @@ The application invokes the Windows Recycle Bin with no permanent-delete fallbac
 **Remove from history** deletes only the selected SQLite history record. A warning confirmation identifies the source and output filenames and states that neither file will be deleted or changed. Cancelling the confirmation leaves the record and both files untouched.
 
 After a confirmed removal, the history table, active filter results, summary totals, and details selection update immediately. This action cannot be used to delete source or output files.
+
+## Bulk actions
+
+When more than one row is selected, the primary actions change to **Replace selected**, **Recycle outputs**, and **Remove history** with the selected count.
+
+Every bulk action opens a scrollable confirmation window listing every selected source and output or target path. Initially blocked items remain visible and are skipped. Eligible items run one at a time, never in parallel. **Stop after current** allows the active verified item to reach a safe boundary before the remaining items are skipped.
+
+Bulk source replacement uses the same preflight, SHA-256 verification, original backup, atomic promotion, Windows Recycle Bin, durable journal, and recovery behavior as the single-record workflow. Cross-selection conflicts that resolve to the same final path are blocked before confirmation. A failure is recorded for that item and does not silently prevent review of the remaining results.
+
+Bulk output recycling revalidates each output immediately before invoking the Windows Recycle Bin and never falls back to permanent deletion. Bulk history removal changes only SQLite records. Each workflow ends with succeeded, failed, and skipped totals plus the first failure details requiring attention.

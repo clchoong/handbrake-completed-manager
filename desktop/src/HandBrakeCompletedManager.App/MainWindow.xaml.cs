@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -51,6 +52,8 @@ public partial class MainWindow : Window
     private bool _trayNotificationShown;
     private ApplicationSettings _settings = ApplicationSettings.Default;
     private IReadOnlyList<ReplacementRecoveryItem> _recoveryItems = [];
+    private bool _bulkOperationInProgress;
+    private bool _stopBulkAfterCurrent;
 
     public MainWindow()
     {
@@ -126,9 +129,9 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromSeconds(3)
         };
         _historyRefreshTimer.Tick += HistoryRefreshTimer_Tick;
-        DataContext = this;
         _historyView = CollectionViewSource.GetDefaultView(HistoryRows);
         _historyView.Filter = MatchesHistoryFilter;
+        DataContext = this;
         QuickFilterComboBox.SelectedIndex = 0;
         _trayIconController = new TrayIconController(OpenFromTray, RefreshFromTray, ExitFromTray);
         Loaded += MainWindow_Loaded;
@@ -278,6 +281,19 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
+        if (_bulkOperationInProgress && !_allowClose)
+        {
+            e.Cancel = true;
+            OpenFromTray();
+            System.Windows.MessageBox.Show(
+                this,
+                "A bulk file operation is running. Choose Stop after current and wait for the current verified item to finish before closing.",
+                "Bulk operation in progress",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         if (_allowClose)
         {
             return;
@@ -328,6 +344,13 @@ public partial class MainWindow : Window
 
     private void ExitFromTray()
     {
+        if (_bulkOperationInProgress)
+        {
+            OpenFromTray();
+            StatusText.Text = "A bulk operation is running. Choose Stop after current before exiting.";
+            return;
+        }
+
         _allowClose = true;
         _logger.LogAsync(DiagnosticLogLevel.Information, "Desktop application exited from the tray menu.")
             .GetAwaiter()
@@ -519,20 +542,72 @@ public partial class MainWindow : Window
 
     private void HistoryGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var row = HistoryGrid.SelectedItem as HistoryRow;
-        var hasSelection = row is not null;
+        var selectedRows = GetSelectedRows();
+        var row = selectedRows.Count == 1 ? selectedRows[0] : null;
+        var hasSelection = selectedRows.Count > 0;
+        var hasSingleSelection = row is not null;
 
-        PlayDestinationButton.IsEnabled = hasSelection;
-        PlaySourceButton.IsEnabled = hasSelection;
-        RevealDestinationButton.IsEnabled = hasSelection;
-        RevealSourceButton.IsEnabled = hasSelection;
-        ReviewReplacementButton.IsEnabled = hasSelection;
-        RecycleOutputButton.IsEnabled = row?.Record.DestinationExists == true;
-        RemoveHistoryButton.IsEnabled = hasSelection;
-        SelectedRecordText.Text = row is null
-            ? "Select a completed encode"
-            : $"Selected: {row.DestinationFilename}";
+        PlayDestinationButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
+        PlaySourceButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
+        RevealDestinationButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
+        RevealSourceButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
+        ReviewReplacementButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
+        RecycleOutputButton.IsEnabled =
+            hasSelection &&
+            selectedRows.Any(item => item.Record.DestinationExists) &&
+            !_bulkOperationInProgress;
+        RemoveHistoryButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
+        ClearSelectionButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
+        SelectAllShownButton.IsEnabled = _historyView.Cast<object>().Any() && !_bulkOperationInProgress;
+
+        ReviewReplacementButton.Content = selectedRows.Count > 1
+            ? $"Replace selected ({selectedRows.Count:N0})"
+            : "Review & replace";
+        RecycleOutputButton.Content = selectedRows.Count > 1
+            ? $"Recycle outputs ({selectedRows.Count:N0})"
+            : "Recycle output";
+        RemoveHistoryButton.Content = selectedRows.Count > 1
+            ? $"Remove history ({selectedRows.Count:N0})"
+            : "Remove history";
+        SelectedRecordText.Text = selectedRows.Count switch
+        {
+            0 => "Select a completed encode",
+            1 => $"Selected: {row!.DestinationFilename}",
+            _ => $"{selectedRows.Count:N0} completed encodes selected"
+        };
         UpdateDetailsPanel(row);
+    }
+
+    private IReadOnlyList<HistoryRow> GetSelectedRows()
+    {
+        var selectedIds = HistoryGrid.SelectedItems
+            .Cast<HistoryRow>()
+            .Select(row => row.Id)
+            .ToHashSet();
+        return _historyView
+            .Cast<HistoryRow>()
+            .Where(row => selectedIds.Contains(row.Id))
+            .ToArray();
+    }
+
+    private void SelectAllShownButton_Click(object sender, RoutedEventArgs e)
+    {
+        HistoryGrid.SelectAll();
+        StatusText.Text = $"Selected {HistoryGrid.SelectedItems.Count:N0} shown record(s).";
+    }
+
+    private void ClearSelectionButton_Click(object sender, RoutedEventArgs e)
+    {
+        HistoryGrid.UnselectAll();
+        StatusText.Text = "Selection cleared.";
+    }
+
+    private void StopBulkButton_Click(object sender, RoutedEventArgs e)
+    {
+        _stopBulkAfterCurrent = true;
+        StopBulkButton.IsEnabled = false;
+        StopBulkButton.Content = "Stopping after current...";
+        StatusText.Text = "Stop requested. The current item will finish or stop safely; remaining items will be skipped.";
     }
 
     private void HistoryGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -612,10 +687,14 @@ public partial class MainWindow : Window
         _historyView.Refresh();
         ResultsCountText.Text = $"{_historyView.Cast<object>().Count():N0} shown";
 
-        if (HistoryGrid.SelectedItem is HistoryRow selectedRow && !_historyView.Contains(selectedRow))
+        foreach (var selectedRow in HistoryGrid.SelectedItems.Cast<HistoryRow>()
+                     .Where(row => !_historyView.Contains(row))
+                     .ToArray())
         {
-            HistoryGrid.SelectedItem = null;
+            HistoryGrid.SelectedItems.Remove(selectedRow);
         }
+
+        SelectAllShownButton.IsEnabled = _historyView.Cast<object>().Any() && !_bulkOperationInProgress;
     }
 
     private void UpdateDetailsPanel(HistoryRow? row)
@@ -666,11 +745,20 @@ public partial class MainWindow : Window
 
     private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
     {
-        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        var selectedRows = GetSelectedRows();
+        if (selectedRows.Count == 0)
         {
             StatusText.Text = "Select a completed encode first.";
             return;
         }
+
+        if (selectedRows.Count > 1)
+        {
+            await RunBulkReplacementAsync(selectedRows);
+            return;
+        }
+
+        var row = selectedRows[0];
 
         try
         {
@@ -826,13 +914,149 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task RunBulkReplacementAsync(IReadOnlyList<HistoryRow> selectedRows)
+    {
+        var initialCandidates = selectedRows.Select(CreateBulkReplacementCandidate).ToArray();
+        var bulkReviews = BulkReplacementPlanner
+            .Review(initialCandidates.Where(candidate => candidate.Plan is not null).Select(candidate => candidate.Plan!))
+            .ToDictionary(review => review.Plan.CompletedEncode.Id);
+        var candidates = initialCandidates.Select(candidate =>
+            candidate.Plan is not null && bulkReviews.TryGetValue(candidate.Row.Id, out var review)
+                ? candidate with
+                {
+                    Status = FormatBulkReplacementStatus(review.Issues),
+                    CanProceed = review.CanProceed
+                }
+                : candidate).ToArray();
+        var eligible = candidates
+            .Where(candidate => candidate.CanProceed)
+            .ToArray();
+        var confirmationItems = candidates.Select(candidate => new BulkConfirmationItem(
+            candidate.Row.SourcePath,
+            candidate.Plan?.Paths.FinalPath ?? candidate.Row.DestinationPath,
+            candidate.Status,
+            candidate.CanProceed)).ToArray();
+        var confirmation = new BulkConfirmationWindow(
+            "Confirm bulk source replacement",
+            "Replace selected sources safely",
+            "Eligible items will run one at a time. Each converted file is copied and SHA-256 verified, the original source is backed up, the verified copy is promoted without overwrite, and only then is the original moved to the Windows Recycle Bin. Blocked items are skipped.",
+            $"Replace {eligible.Length:N0} eligible source(s)",
+            confirmationItems)
+        {
+            Owner = this
+        };
+
+        if (confirmation.ShowDialog() != true)
+        {
+            StatusText.Text = "Bulk replacement cancelled. No files were changed.";
+            return;
+        }
+
+        BeginBulkOperation();
+        var succeeded = 0;
+        var failures = new List<string>();
+        try
+        {
+            for (var index = 0; index < eligible.Length; index++)
+            {
+                var candidate = eligible[index];
+                var currentNumber = index + 1;
+                StatusText.Text = $"Replacing {currentNumber:N0} of {eligible.Length:N0}: {candidate.Row.SourceFilename}";
+                var progress = new Progress<SafeReplacementProgress>(value =>
+                {
+                    var percentage = value.Percentage is null ? string.Empty : $" {value.Percentage:0.#}%";
+                    StatusText.Text = $"Replacing {currentNumber:N0} of {eligible.Length:N0}: {candidate.Row.SourceFilename} — {value.Message}{percentage}";
+                });
+
+                try
+                {
+                    await _safeReplacementService.ReplaceAsync(candidate.Plan!, progress);
+                    succeeded++;
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Information,
+                        "A selected source completed the managed bulk replacement workflow.");
+                }
+                catch (Exception exception)
+                {
+                    failures.Add($"{candidate.Row.SourceFilename}: {exception.Message}");
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Warning,
+                        "A selected source stopped safely during managed bulk replacement; remaining items may continue.",
+                        exception);
+                }
+
+                if (_stopBulkAfterCurrent)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            EndBulkOperation();
+            await LoadHistoryAsync();
+            await RefreshRecoverySummaryAsync();
+        }
+
+        var unattempted = eligible.Length - succeeded - failures.Count;
+        var skipped = candidates.Length - eligible.Length + unattempted;
+        ShowBulkSummary(
+            "Bulk source replacement complete",
+            selectedRows.Count,
+            succeeded,
+            failures,
+            skipped,
+            "Successful replacements retained verified backups. Originals were moved to the Windows Recycle Bin; no permanent deletion was used.");
+    }
+
+    private BulkReplacementCandidate CreateBulkReplacementCandidate(HistoryRow row)
+    {
+        try
+        {
+            var plan = _replacementPreflightService.Review(row.Record);
+            var blockingIssue = plan.Issues.FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Blocking);
+            var warning = plan.Issues.FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Warning);
+            var status = blockingIssue is not null
+                ? $"Blocked — {blockingIssue.Message}"
+                : warning is not null
+                    ? $"Ready — {warning.Message}"
+                    : "Ready";
+            return new BulkReplacementCandidate(row, plan, status, plan.CanProceed);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            return new BulkReplacementCandidate(row, null, $"Blocked — {exception.Message}", false);
+        }
+    }
+
+    private static string FormatBulkReplacementStatus(IReadOnlyList<ReplacementIssue> issues)
+    {
+        var blockingIssue = issues.FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Blocking);
+        var warning = issues.FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Warning);
+        return blockingIssue is not null
+            ? $"Blocked — {blockingIssue.Message}"
+            : warning is not null
+                ? $"Ready — {warning.Message}"
+                : "Ready";
+    }
+
     private async void RecycleOutputButton_Click(object sender, RoutedEventArgs e)
     {
-        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        var selectedRows = GetSelectedRows();
+        if (selectedRows.Count == 0)
         {
             StatusText.Text = "Select a completed encode first.";
             return;
         }
+
+        if (selectedRows.Count > 1)
+        {
+            await RunBulkOutputRecycleAsync(selectedRows);
+            return;
+        }
+
+        var row = selectedRows[0];
 
         var confirmation = System.Windows.MessageBox.Show(
             this,
@@ -873,18 +1097,102 @@ public partial class MainWindow : Window
         }
         finally
         {
-            RecycleOutputButton.IsEnabled =
-                HistoryGrid.SelectedItem is HistoryRow selected && selected.Record.DestinationExists;
+            HistoryGrid_SelectionChanged(this, new SelectionChangedEventArgs(
+                Selector.SelectionChangedEvent,
+                Array.Empty<object>(),
+                Array.Empty<object>()));
         }
+    }
+
+    private async Task RunBulkOutputRecycleAsync(IReadOnlyList<HistoryRow> selectedRows)
+    {
+        var eligible = selectedRows.Where(row => row.Record.DestinationExists).ToArray();
+        var confirmationItems = selectedRows.Select(row => new BulkConfirmationItem(
+            row.SourcePath,
+            row.DestinationPath,
+            row.Record.DestinationExists ? "Ready" : "Blocked — output is missing",
+            row.Record.DestinationExists)).ToArray();
+        var confirmation = new BulkConfirmationWindow(
+            "Confirm bulk output recycling",
+            "Recycle selected output files",
+            "Every eligible output will be revalidated against its captured size and timestamp, checked for unfinished replacement dependencies, and moved to the Windows Recycle Bin one at a time. Source files and history records are kept. Permanent deletion is never used.",
+            $"Recycle {eligible.Length:N0} eligible output(s)",
+            confirmationItems)
+        {
+            Owner = this
+        };
+
+        if (confirmation.ShowDialog() != true)
+        {
+            StatusText.Text = "Bulk output recycling cancelled. No files were changed.";
+            return;
+        }
+
+        BeginBulkOperation();
+        var succeeded = 0;
+        var failures = new List<string>();
+        try
+        {
+            for (var index = 0; index < eligible.Length; index++)
+            {
+                var row = eligible[index];
+                StatusText.Text = $"Verifying and recycling output {index + 1:N0} of {eligible.Length:N0}: {row.DestinationFilename}";
+                try
+                {
+                    await _outputRecycleService.RecycleAsync(row.Record);
+                    succeeded++;
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Information,
+                        "A selected output completed verified bulk Recycle Bin retirement.");
+                }
+                catch (Exception exception)
+                {
+                    failures.Add($"{row.DestinationFilename}: {exception.Message}");
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Warning,
+                        "A selected output was refused or failed safely during bulk recycling; remaining items may continue.",
+                        exception);
+                }
+
+                if (_stopBulkAfterCurrent)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            EndBulkOperation();
+            await LoadHistoryAsync();
+        }
+
+        var unattempted = eligible.Length - succeeded - failures.Count;
+        var skipped = selectedRows.Count - eligible.Length + unattempted;
+        ShowBulkSummary(
+            "Bulk output recycling complete",
+            selectedRows.Count,
+            succeeded,
+            failures,
+            skipped,
+            "History records and source files were kept. Successful outputs can normally be restored from the Windows Recycle Bin.");
     }
 
     private async void RemoveHistoryButton_Click(object sender, RoutedEventArgs e)
     {
-        if (HistoryGrid.SelectedItem is not HistoryRow row)
+        var selectedRows = GetSelectedRows();
+        if (selectedRows.Count == 0)
         {
             StatusText.Text = "Select a completed encode first.";
             return;
         }
+
+        if (selectedRows.Count > 1)
+        {
+            await RunBulkHistoryRemovalAsync(selectedRows);
+            return;
+        }
+
+        var row = selectedRows[0];
 
         var confirmation = System.Windows.MessageBox.Show(
             this,
@@ -928,8 +1236,156 @@ public partial class MainWindow : Window
         }
         finally
         {
-            RemoveHistoryButton.IsEnabled = HistoryGrid.SelectedItem is HistoryRow;
+            HistoryGrid_SelectionChanged(this, new SelectionChangedEventArgs(
+                Selector.SelectionChangedEvent,
+                Array.Empty<object>(),
+                Array.Empty<object>()));
         }
+    }
+
+    private async Task RunBulkHistoryRemovalAsync(IReadOnlyList<HistoryRow> selectedRows)
+    {
+        var confirmationItems = selectedRows.Select(row => new BulkConfirmationItem(
+            row.SourcePath,
+            row.DestinationPath,
+            "History only — both files are kept",
+            true)).ToArray();
+        var confirmation = new BulkConfirmationWindow(
+            "Confirm bulk history removal",
+            "Remove selected history records",
+            "Only the selected SQLite history records will be removed. Source and output files will not be deleted, recycled, renamed, moved, or otherwise changed.",
+            $"Remove {selectedRows.Count:N0} history record(s)",
+            confirmationItems)
+        {
+            Owner = this
+        };
+
+        if (confirmation.ShowDialog() != true)
+        {
+            StatusText.Text = "Bulk history removal cancelled. No records or files were changed.";
+            return;
+        }
+
+        BeginBulkOperation();
+        var succeeded = 0;
+        var failures = new List<string>();
+        try
+        {
+            for (var index = 0; index < selectedRows.Count; index++)
+            {
+                var row = selectedRows[index];
+                StatusText.Text = $"Removing history record {index + 1:N0} of {selectedRows.Count:N0}: {row.DestinationFilename}";
+                try
+                {
+                    if (await _repository.RemoveFromHistoryAsync(row.Id))
+                    {
+                        succeeded++;
+                    }
+                    else
+                    {
+                        failures.Add($"{row.DestinationFilename}: history record no longer exists");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    failures.Add($"{row.DestinationFilename}: {exception.Message}");
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Warning,
+                        "A selected history record could not be removed; remaining records may continue.",
+                        exception);
+                }
+
+                if (_stopBulkAfterCurrent)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            EndBulkOperation();
+            await LoadHistoryAsync();
+        }
+
+        var skipped = selectedRows.Count - succeeded - failures.Count;
+        ShowBulkSummary(
+            "Bulk history removal complete",
+            selectedRows.Count,
+            succeeded,
+            failures,
+            skipped,
+            "No source or output files were changed.");
+    }
+
+    private void BeginBulkOperation()
+    {
+        _bulkOperationInProgress = true;
+        _stopBulkAfterCurrent = false;
+        _historyRefreshTimer.Stop();
+        HistoryGrid.IsEnabled = false;
+        HistorySearchTextBox.IsEnabled = false;
+        QuickFilterComboBox.IsEnabled = false;
+        RefreshButton.IsEnabled = false;
+        SettingsButton.IsEnabled = false;
+        SelectAllShownButton.IsEnabled = false;
+        ClearSelectionButton.IsEnabled = false;
+        StopBulkButton.Content = "Stop after current";
+        StopBulkButton.IsEnabled = true;
+        StopBulkButton.Visibility = Visibility.Visible;
+        HistoryGrid_SelectionChanged(this, new SelectionChangedEventArgs(
+            Selector.SelectionChangedEvent,
+            Array.Empty<object>(),
+            Array.Empty<object>()));
+    }
+
+    private void EndBulkOperation()
+    {
+        _bulkOperationInProgress = false;
+        HistoryGrid.IsEnabled = true;
+        HistorySearchTextBox.IsEnabled = true;
+        QuickFilterComboBox.IsEnabled = true;
+        RefreshButton.IsEnabled = true;
+        SettingsButton.IsEnabled = true;
+        StopBulkButton.Visibility = Visibility.Collapsed;
+        StopBulkButton.Content = "Stop after current";
+        StopBulkButton.IsEnabled = true;
+        _historyRefreshTimer.Start();
+        HistoryGrid_SelectionChanged(this, new SelectionChangedEventArgs(
+            Selector.SelectionChangedEvent,
+            Array.Empty<object>(),
+            Array.Empty<object>()));
+    }
+
+    private void ShowBulkSummary(
+        string title,
+        int total,
+        int succeeded,
+        IReadOnlyList<string> failures,
+        int skipped,
+        string closingMessage)
+    {
+        var failureDetails = failures.Count == 0
+            ? string.Empty
+            : "\n\nNeeds attention:\n" + string.Join("\n", failures.Take(8).Select(message => $"• {message}")) +
+              (failures.Count > 8 ? $"\n• …and {failures.Count - 8:N0} more" : string.Empty);
+        var stoppedMessage = _stopBulkAfterCurrent
+            ? "\n\nThe operation stopped after the current item as requested."
+            : string.Empty;
+        var message =
+            $"Selected: {total:N0}\n" +
+            $"Succeeded: {succeeded:N0}\n" +
+            $"Failed: {failures.Count:N0}\n" +
+            $"Skipped: {skipped:N0}" +
+            stoppedMessage +
+            failureDetails +
+            $"\n\n{closingMessage}";
+        StatusText.Text = $"{title}: {succeeded:N0} succeeded, {failures.Count:N0} failed, {skipped:N0} skipped.";
+        System.Windows.MessageBox.Show(
+            this,
+            message,
+            title,
+            MessageBoxButton.OK,
+            failures.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
     private void RunSelectedFileAction(
@@ -966,7 +1422,7 @@ public partial class MainWindow : Window
             await _repository.InitializeAsync();
             var records = await _repository.GetAllAsync();
             var replacementStates = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
-            var selectedRecordId = (HistoryGrid.SelectedItem as HistoryRow)?.Id;
+            var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
 
             HistoryRows.Clear();
             foreach (var record in records)
@@ -978,12 +1434,14 @@ public partial class MainWindow : Window
             }
 
             ApplyHistoryFilter();
-            var selectedRow = selectedRecordId is null
-                ? null
-                : HistoryRows.FirstOrDefault(row => row.Id == selectedRecordId);
-            HistoryGrid.SelectedItem = selectedRow is not null && _historyView.Contains(selectedRow)
-                ? selectedRow
-                : null;
+            HistoryGrid.SelectedItems.Clear();
+            foreach (var selectedRow in HistoryRows.Where(row => selectedRecordIds.Contains(row.Id)))
+            {
+                if (_historyView.Contains(selectedRow))
+                {
+                    HistoryGrid.SelectedItems.Add(selectedRow);
+                }
+            }
 
             UpdateSummary(records);
             StatusText.Text = $"{records.Count:N0} record(s) - {_databasePath}";
@@ -1025,6 +1483,12 @@ public partial class MainWindow : Window
         return $"{size:0.##} {units[unitIndex]}";
     }
 }
+
+internal sealed record BulkReplacementCandidate(
+    HistoryRow Row,
+    ReplacementPlan? Plan,
+    string Status,
+    bool CanProceed);
 
 public sealed record HistoryRow(
     CompletedEncode Record,

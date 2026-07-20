@@ -77,8 +77,12 @@ The current Phase 1 implementation provides:
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
 - Selected history records support source/output playback and Explorer reveal; double-click opens the output.
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
+- Ctrl-click, Shift-click, Ctrl+A, **Select all shown**, and **Clear selection** support deliberate multi-row management while single-file playback and reveal actions remain limited to one row.
 - The history table clearly identifies source replacement as not replaced, in progress, needing attention, replaced, or restored.
 - **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
+- Bulk output recycling lists every selected path, skips initially ineligible records, revalidates and recycles eligible outputs sequentially, supports stopping between items, and reports succeeded, failed, and skipped totals.
+- Bulk source replacement preflights all selected records, blocks cross-selection final-path collisions, displays every source and target before confirmation, runs the existing verified replacement transaction sequentially, and retains record-specific recovery state after any failure.
+- Bulk Remove from History deletes only the selected SQLite records and never changes source or output files.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
 - A session-wide single-instance guard prevents duplicate tray icons; launching another copy restores the already-running window and exits the new process.
@@ -113,7 +117,8 @@ The current Phase 1 implementation provides:
 - [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
-- [Version 0.4.0 release notes](docs/releases/v0.4.0.md): public-release highlights, installation boundary, and checksum
+- [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
+- [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum
 - [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior
 - [Desktop UI design](docs/desktop-ui-design.md): visual system, information hierarchy, replacement experience, accessibility, and scaling behavior
 - [Publishing and independence](docs/publishing-and-independence.md): HandBrake relationship, GPL boundary, branding, and repository licensing decisions
