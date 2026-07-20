@@ -15,19 +15,19 @@ The desktop interface uses a shared high-end visual system designed for clear da
 
 ## Replacement experience
 
-The safe replacement review is intentionally progressive:
+The normal replacement experience is intentionally simple:
 
-1. The exact file plan is shown first.
-2. **Replace source safely** is presented as the recommended hero action.
-3. Copy and backup progress remain visible throughout the workflow.
-4. Safety findings and recovery state are separated from normal status text.
-5. Individual transaction controls are collapsed under **Advanced recovery controls**.
+1. One warning identifies the exact source and HandBrake output paths and summarizes what changes.
+2. **Replace source** starts the complete verified workflow.
+3. One overall progress bar maps the internal copy, backup, verification, promotion, recycling, and completion stages into familiar file-copy progress.
+4. Success or a recoverable stop remains visible until the user closes the progress window.
+5. The detailed replacement review and individual transaction controls appear only through Recovery when an interrupted checkpoint needs attention.
 
 This keeps the normal path simple without removing the checkpoint-specific controls needed after interruption.
 
 ## Shared design system
 
-`Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, and settings windows consume the same resources.
+`Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, settings, progress, and About windows consume the same resources.
 
 The source-replacement column uses plain-language durable states. **✓ Replaced** is shown only for the terminal `Completed` checkpoint, while incomplete and recovery-required work remains visibly distinct.
 

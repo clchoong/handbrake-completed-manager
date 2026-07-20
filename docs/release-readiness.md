@@ -1,6 +1,6 @@
 # Release readiness
 
-Version 0.6.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.7.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
@@ -25,11 +25,16 @@ Version 0.6.0 was validated as a self-contained Windows x64 open-source release 
 - Activity-log integration tests verify missing-output refusal, completed-history deduplication, and non-destructive import.
 - Real-log read-only validation parsed all 94 successful completion logs in the local sample set and correctly separated existing from missing outputs.
 - Tray Exit no longer synchronously waits for logging on the UI thread, and history removal performs SQLite work away from the interface thread.
+- The normal source-replacement path uses one exact-path warning followed by a dedicated overall progress window; detailed transaction controls remain available through Recovery.
+- Bulk history removal yields for dialog rendering, then shows current-item and overall progress in a separate responsive window until final totals are available.
+- Settings content scrolls independently of its footer, keeping diagnostic-log controls reachable at smaller sizes and display scaling.
+- The About window reports the packaged assembly version, MIT licence, independence notice, platform, runtime, architecture, storage boundary, and project links.
+- Packaged executable metadata reports product version `0.7.0`, company `clchoong`, and the expected copyright.
 
-The validated archive is `HandBrake-Completed-Manager-0.6.0-win-x64.zip`. Its size is 116,205,604 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.7.0-win-x64.zip`. Its size is 116,214,145 bytes and its SHA-256 checksum is:
 
 ```text
-B74980384456810292A703457C55148BB4C34EBB7A3164D0485ED3A117A54913
+22C94776C216F941B048949BEAA54A3A8C99825E8CA25B9F824DB76DAD231C4B
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -51,7 +56,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.6.0
+.\scripts\publish-portable.ps1 -Version 0.7.0
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

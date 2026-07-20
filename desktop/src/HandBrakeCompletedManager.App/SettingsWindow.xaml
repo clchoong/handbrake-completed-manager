@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Settings — HandBrake Completed Manager"
         Width="600"
-        Height="560"
-        ResizeMode="NoResize"
+        Height="620"
+        MinHeight="500"
+        ResizeMode="CanResize"
         WindowStartupLocation="CenterOwner">
     <Grid>
         <Grid.RowDefinitions>
@@ -20,7 +21,10 @@
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Row="1" Margin="26,22">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="26,22">
             <Border Margin="0,0,0,14" Style="{StaticResource CardStyle}">
                 <StackPanel>
                     <TextBlock Style="{StaticResource EyebrowStyle}" Text="WINDOW &amp; NOTIFICATION AREA" />
@@ -67,6 +71,7 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+        </ScrollViewer>
 
         <Border Grid.Row="2" Padding="26,13" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">

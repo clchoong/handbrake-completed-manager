@@ -102,7 +102,9 @@ The current Phase 1 implementation provides:
 - Successful readiness review persists a revisioned transaction journal containing verified source and final-file digests.
 - After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
 - The desktop undo workflow explicitly prepares undo, reconstructs the source through a resumable verified artifact, recycles the promoted final only after source verification, and atomically restores source availability in history.
-- After reviewing all planned paths, **Replace source safely** runs temporary-copy verification, original-backup verification, atomic promotion, Windows Recycle Bin source retirement, and atomic completion from one path-specific confirmation, with live progress and durable recovery checkpoints.
+- **Replace source** uses one exact-path warning and one overall file-copy-style progress window while temporary-copy verification, original-backup verification, atomic promotion, Windows Recycle Bin source retirement, and atomic completion run internally with durable recovery checkpoints.
+- Bulk history removal closes its confirmation before opening a dedicated responsive progress window that identifies the active record and retains the final totals.
+- Settings remain vertically scrollable at smaller window sizes and display scaling, and About reports the packaged version, MIT licence, independence notice, platform, runtime, storage boundary, and project links.
 - A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, a focused one-click replacement experience, and collapsed advanced recovery controls across Windows 10 and Windows 11.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
@@ -117,8 +119,10 @@ The current Phase 1 implementation provides:
 - [Completed history browsing](docs/history-file-actions.md): search, quick filters, sorting, details, file actions, and missing-file behavior
 - [System tray behavior](docs/system-tray.md): close-to-tray lifecycle, status, commands, and Windows shutdown behavior
 - [Settings and diagnostic logging](docs/settings-and-logging.md): local storage, available settings, log format, and privacy boundaries
+- [About and software information](docs/about.md): version, licence, independence, platform, runtime, storage, and notice links
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
+- [Version 0.7.0 release notes](docs/releases/v0.7.0.md): simplified replacement, responsive bulk removal, Settings scrolling, and About
 - [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum

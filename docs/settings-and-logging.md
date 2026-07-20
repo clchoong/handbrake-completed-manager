@@ -25,6 +25,8 @@ The Settings window provides:
 - Refresh completed history every 3, 5, 10, 30, or 60 seconds.
 - Open the diagnostic log folder.
 
+The settings content scrolls independently of the fixed Save/Cancel footer, so the diagnostic-log section remains reachable on smaller windows and higher Windows display scaling.
+
 Changes take effect immediately except Start Minimized, which applies on the next application launch.
 
 ## Diagnostic logs

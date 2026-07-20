@@ -1,0 +1,94 @@
+<Window x:Class="HandBrakeCompletedManager.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About HandBrake Completed Manager"
+        Width="720"
+        Height="650"
+        MinWidth="620"
+        MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Padding="28,22" Background="{StaticResource NavyBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Image Width="52" Height="52" Margin="0,0,16,0" Source="Assets/HandBrakeCompletedManager.png" Stretch="Uniform" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="HandBrake Completed Manager" />
+                    <TextBlock x:Name="VersionText" Margin="0,4,0,0" Foreground="#AEB9CA" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="28,24">
+                <TextBlock FontSize="17"
+                           FontWeight="SemiBold"
+                           Text="Permanent completed-encode history and safety-focused file management" />
+                <TextBlock Margin="0,8,0,18"
+                           Foreground="{StaticResource InkMutedBrush}"
+                           TextWrapping="Wrap"
+                           Text="A portable Windows companion that preserves source-to-output history after HandBrake finishes, recovers eligible saved activity logs, and provides verified replacement and Recycle Bin workflows." />
+
+                <Border Margin="0,0,0,14" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource EyebrowStyle}" Text="LICENCE" />
+                        <TextBlock Margin="0,8,0,0" FontWeight="SemiBold" Text="MIT License" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Foreground="{StaticResource InkMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Text="Copyright © 2026 clchoong. The source code may be used, copied, modified, merged, published, distributed, sublicensed, and sold under the terms of the included MIT License." />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,0,0,14" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource EyebrowStyle}" Text="INDEPENDENT PROJECT" />
+                        <TextBlock Margin="0,8,0,0"
+                                   TextWrapping="Wrap"
+                                   Text="This application is not affiliated with, endorsed by, or maintained by the HandBrake project. “HandBrake” identifies compatibility only. No HandBrake code, binaries, documentation, or artwork are included." />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock FontWeight="SemiBold" Text="Platform" />
+                        <TextBlock Grid.Column="1" Text="Windows 10 build 17763+ and Windows 11" />
+                        <TextBlock Grid.Row="1" Margin="0,8,0,0" FontWeight="SemiBold" Text="Runtime" />
+                        <TextBlock x:Name="RuntimeText" Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" />
+                        <TextBlock Grid.Row="2" Margin="0,8,0,0" FontWeight="SemiBold" Text="Distribution" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" Text="Self-contained portable Windows x64" />
+                        <TextBlock Grid.Row="3" Margin="0,8,0,0" FontWeight="SemiBold" Text="Storage" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,8,0,0" Text="Local SQLite database; no cloud account required" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Padding="26,13" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button MinWidth="110" Margin="0,0,8,0" Style="{StaticResource CompactButtonStyle}" Click="ProjectPageButton_Click" Content="Project page" />
+                <Button MinWidth="130" Margin="0,0,8,0" Style="{StaticResource CompactButtonStyle}" Click="NoticesButton_Click" Content="Licence &amp; notices" />
+                <Button MinWidth="96" IsCancel="True" Content="Close" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

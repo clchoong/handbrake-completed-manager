@@ -4,7 +4,7 @@ param(
     [string]$RuntimeIdentifier = "win-x64",
 
     [ValidatePattern("^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.6.0",
+    [string]$Version = "0.7.0",
 
     [string]$ArtifactsDirectory
 )
@@ -37,6 +37,10 @@ $commonPublishArguments = @(
     "--configuration", "Release",
     "--runtime", $RuntimeIdentifier,
     "--self-contained", "true",
+    "--disable-build-servers",
+    "--maxcpucount:1",
+    "-p:BuildInParallel=false",
+    "-p:UseSharedCompilation=false",
     "-p:PublishSingleFile=true",
     "-p:IncludeNativeLibrariesForSelfExtract=true",
     "-p:PublishTrimmed=false",

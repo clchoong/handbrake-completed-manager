@@ -61,6 +61,14 @@
                             Foreground="White"
                             Click="SettingsButton_Click"
                             Content="Settings" />
+                    <Button x:Name="AboutButton"
+                            MinWidth="84"
+                            Margin="0,0,8,0"
+                            Background="#263650"
+                            BorderBrush="#3A4A63"
+                            Foreground="White"
+                            Click="AboutButton_Click"
+                            Content="About" />
                     <Button x:Name="RefreshButton"
                             MinWidth="96"
                             Style="{StaticResource PrimaryButtonStyle}"
@@ -323,8 +331,8 @@
                                     <Button x:Name="ReviewReplacementButton"
                                             Margin="0,0,8,0"
                                             Style="{StaticResource PrimaryButtonStyle}"
-                                            Click="ReviewReplacementButton_Click"
-                                            Content="Review &amp; replace"
+                                            Click="ReplaceSourceButton_Click"
+                                            Content="Replace source"
                                             IsEnabled="False" />
                                     <Button x:Name="PlayDestinationButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="PlayDestinationButton_Click" Content="Play output" IsEnabled="False" />
                                     <Button x:Name="PlaySourceButton" Margin="0,0,6,0" Style="{StaticResource CompactButtonStyle}" Click="PlaySourceButton_Click" Content="Play source" IsEnabled="False" />

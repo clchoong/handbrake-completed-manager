@@ -303,6 +303,8 @@ becomes:
 
 The replacement operation is destructive, so use a safe process.
 
+The normal interface presents one clear exact-path warning followed by one overall file-copy-style progress window. Internal preflight, copy, backup, verification, promotion, recycling, and transaction checkpoints remain automatic. Detailed transaction controls belong in Recovery rather than the normal replacement path.
+
 1. Confirm the source file exists.
 2. Confirm the converted file exists.
 3. Confirm the converted file is not still being written.

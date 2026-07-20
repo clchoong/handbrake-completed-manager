@@ -209,6 +209,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        new AboutWindow { Owner = this }.ShowDialog();
+    }
+
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
     {
         await LoadHistoryAsync();
@@ -624,7 +629,7 @@ public partial class MainWindow : Window
 
         ReviewReplacementButton.Content = selectedRows.Count > 1
             ? $"Replace selected ({selectedRows.Count:N0})"
-            : "Review & replace";
+            : "Replace source";
         RecycleOutputButton.Content = selectedRows.Count > 1
             ? $"Recycle outputs ({selectedRows.Count:N0})"
             : "Recycle output";
@@ -804,6 +809,101 @@ public partial class MainWindow : Window
 
     private void RevealSourceButton_Click(object sender, RoutedEventArgs e) =>
         RunSelectedFileAction(_fileActions.Reveal, row => row.SourcePath);
+
+    private async void ReplaceSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        var selectedRows = GetSelectedRows();
+        if (selectedRows.Count == 0)
+        {
+            StatusText.Text = "Select a completed encode first.";
+            return;
+        }
+
+        if (selectedRows.Count > 1)
+        {
+            await RunBulkReplacementAsync(selectedRows);
+            return;
+        }
+
+        var row = selectedRows[0];
+        try
+        {
+            var plan = _replacementPreflightService.Review(row.Record);
+            if (!plan.CanProceed)
+            {
+                var reason = plan.Issues
+                    .FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Blocking)?
+                    .Message ?? "The replacement safety checks did not pass.";
+                StatusText.Text = $"Source replacement cannot start: {reason}";
+                System.Windows.MessageBox.Show(
+                    this,
+                    $"The source cannot be replaced yet.\n\n{reason}\n\nUse Recovery when an earlier replacement needs attention.",
+                    "Replacement blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var warning = plan.Issues
+                .FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Warning)?
+                .Message;
+            var safetyText =
+                $"The converted file will be copied and verified at:\n{plan.Paths.FinalPath}\n\n" +
+                "Only after verification, the original source moves to the Windows Recycle Bin. " +
+                "A verified backup is retained for Undo, and the existing HandBrake output is kept." +
+                (string.IsNullOrWhiteSpace(warning) ? string.Empty : $"\n\nNote: {warning}");
+            var confirmation = new FileActionConfirmationWindow(
+                "Replace source",
+                "Replace the original source?",
+                "Check the two files below, then choose Replace to start. Progress will remain visible throughout the operation.",
+                row.SourcePath,
+                row.DestinationPath,
+                safetyText,
+                "Replace source")
+            {
+                Owner = this
+            };
+
+            if (confirmation.ShowDialog() != true)
+            {
+                StatusText.Text = "Source replacement cancelled. No files were changed.";
+                return;
+            }
+
+            var progressWindow = new ReplacementProgressWindow(plan, _safeReplacementService)
+            {
+                Owner = this
+            };
+            progressWindow.ShowDialog();
+            await LoadHistoryAsync();
+            await RefreshRecoverySummaryAsync();
+
+            if (progressWindow.Result is not null)
+            {
+                StatusText.Text =
+                    "Source replacement completed. The converted file is beside the original location and the original is in the Windows Recycle Bin.";
+                _ = _logger.LogAsync(
+                    DiagnosticLogLevel.Information,
+                    "The simplified source replacement workflow completed atomically.");
+            }
+            else if (progressWindow.Failure is not null)
+            {
+                StatusText.Text = $"Source replacement stopped safely: {progressWindow.Failure.Message}";
+                _ = _logger.LogAsync(
+                    DiagnosticLogLevel.Warning,
+                    "The simplified source replacement workflow stopped at a recoverable checkpoint.",
+                    progressWindow.Failure);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            StatusText.Text = $"Unable to replace the source: {exception.Message}";
+            _ = _logger.LogAsync(
+                DiagnosticLogLevel.Error,
+                "The simplified source replacement workflow could not start.",
+                exception);
+        }
+    }
 
     private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
     {
@@ -1329,6 +1429,16 @@ public partial class MainWindow : Window
             return;
         }
 
+        await Dispatcher.Yield(DispatcherPriority.Render);
+        var progressWindow = new BulkOperationProgressWindow(
+            "Removing completed history",
+            "Removing selected history records",
+            "Only database records are changing; source and output files remain untouched")
+        {
+            Owner = this
+        };
+        progressWindow.Show();
+        await Dispatcher.Yield(DispatcherPriority.Render);
         BeginBulkOperation();
         var succeeded = 0;
         var failures = new List<string>();
@@ -1337,7 +1447,9 @@ public partial class MainWindow : Window
             for (var index = 0; index < selectedRows.Count; index++)
             {
                 var row = selectedRows[index];
+                progressWindow.Report(index, selectedRows.Count, $"Removing: {row.DestinationFilename}");
                 StatusText.Text = $"Removing history record {index + 1:N0} of {selectedRows.Count:N0}: {row.DestinationFilename}";
+                await Dispatcher.Yield(DispatcherPriority.Render);
                 try
                 {
                     if (await Task.Run(() => _repository.RemoveFromHistoryAsync(row.Id)))
@@ -1371,13 +1483,9 @@ public partial class MainWindow : Window
         }
 
         var skipped = selectedRows.Count - succeeded - failures.Count;
-        ShowBulkSummary(
-            "Bulk history removal complete",
-            selectedRows.Count,
-            succeeded,
-            failures,
-            skipped,
-            "No source or output files were changed.");
+        var summary = $"{succeeded:N0} removed, {failures.Count:N0} failed, {skipped:N0} skipped. No media files were changed.";
+        progressWindow.Complete(summary, failures.Count > 0);
+        StatusText.Text = $"Bulk history removal: {summary}";
     }
 
     private void BeginBulkOperation()
@@ -1390,6 +1498,7 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = false;
         RefreshButton.IsEnabled = false;
         SettingsButton.IsEnabled = false;
+        AboutButton.IsEnabled = false;
         ImportLogsButton.IsEnabled = false;
         SelectAllShownButton.IsEnabled = false;
         ClearSelectionButton.IsEnabled = false;
@@ -1410,6 +1519,7 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = true;
         RefreshButton.IsEnabled = true;
         SettingsButton.IsEnabled = true;
+        AboutButton.IsEnabled = true;
         ImportLogsButton.IsEnabled = true;
         StopBulkButton.Visibility = Visibility.Collapsed;
         StopBulkButton.Content = "Stop after current";

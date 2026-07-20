@@ -1,8 +1,8 @@
 # One-click safe source replacement
 
-After reviewing a completed encode, its exact source, converted-output, planned-final, temporary, and backup paths, the user can select **Replace source safely**. One path-specific **Yes/No** confirmation authorizes the complete guarded replacement; **No** remains the default.
+For a normal completed encode, the user selects **Replace source**, reviews one warning containing the exact source and converted-output paths, and selects **Replace source** again to authorize the complete guarded replacement. A dedicated progress window then shows one familiar overall progress bar, the current stage, and the active file operation until completion or a recoverable stop.
 
-This removes the need to manually cut and paste files or approve each internal stage separately. The detailed stage controls remain available for recovery and technical review.
+This removes the need to understand or approve each internal stage. The exact planned final and backup paths remain in the warning text, while detailed transaction controls are shown only when the user opens Recovery for an interrupted operation.
 
 ## Automated sequence
 
@@ -29,4 +29,4 @@ The workflow never:
 - Removes the source before the converted copy and original backup are independently verified.
 - Treats a missing file as a successful transition without the matching persisted intent.
 
-If automatic execution stops, the review window reports the error and directs the user to Recovery. The checkpoint-specific detailed control can continue the transaction without repeating already completed destructive work.
+If automatic execution stops, the progress window reports the error and directs the user to Recovery. The checkpoint-specific detailed control can continue the transaction without repeating already completed destructive work.
