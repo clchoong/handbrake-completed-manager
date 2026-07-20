@@ -23,6 +23,9 @@ public partial class MainWindow : Window
     private readonly ReplacementOperationRepository _replacementOperationRepository;
     private readonly TemporaryCopyService _temporaryCopyService;
     private readonly TemporaryCopyCleanupService _temporaryCopyCleanupService;
+    private readonly OriginalBackupRepository _originalBackupRepository;
+    private readonly OriginalBackupService _originalBackupService;
+    private readonly OriginalBackupCleanupService _originalBackupCleanupService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly DiagnosticLogger _logger;
@@ -48,6 +51,13 @@ public partial class MainWindow : Window
         _replacementOperationRepository = new ReplacementOperationRepository(_databasePath);
         _temporaryCopyService = new TemporaryCopyService(_replacementOperationRepository);
         _temporaryCopyCleanupService = new TemporaryCopyCleanupService(_replacementOperationRepository);
+        _originalBackupRepository = new OriginalBackupRepository(_databasePath);
+        _originalBackupService = new OriginalBackupService(
+            _replacementOperationRepository,
+            _originalBackupRepository);
+        _originalBackupCleanupService = new OriginalBackupCleanupService(
+            _replacementOperationRepository,
+            _originalBackupRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -520,13 +530,20 @@ public partial class MainWindow : Window
                 plan,
                 _temporaryCopyService,
                 _temporaryCopyCleanupService,
-                _replacementOperationRepository)
+                _replacementOperationRepository,
+                _originalBackupRepository,
+                _originalBackupService,
+                _originalBackupCleanupService)
             {
                 Owner = this
             };
             reviewWindow.ShowDialog();
             StatusText.Text = reviewWindow.CopyResult is not null
-                ? "Verified temporary copy created. Source backup and replacement remain disabled."
+                ? "Verified temporary copy created. Original backup can now be prepared; final replacement remains disabled."
+                : reviewWindow.BackupResult is not null
+                    ? "Verified original-backup copy created. The source remains in place and final replacement is disabled."
+                : reviewWindow.BackupCleanupResult is not null
+                    ? "Original-backup artifact discarded. The source and verified temporary copy remain unchanged."
                 : reviewWindow.CleanupResult is not null
                     ? "Temporary recovery file discarded. A fresh copy can now be started."
                 : reviewWindow.CopyWasCancelled
@@ -535,17 +552,33 @@ public partial class MainWindow : Window
                         ? $"Temporary copy failed: {reviewWindow.CopyFailure.Message}"
                         : reviewWindow.CleanupFailure is not null
                             ? $"Temporary-file cleanup failed: {reviewWindow.CleanupFailure.Message}"
+                        : reviewWindow.BackupWasCancelled
+                            ? "Original backup cancelled. Any partial backup was retained; the source was unchanged."
+                        : reviewWindow.BackupFailure is not null
+                            ? $"Original backup failed: {reviewWindow.BackupFailure.Message}"
+                        : reviewWindow.BackupCleanupFailure is not null
+                            ? $"Backup-file cleanup failed: {reviewWindow.BackupCleanupFailure.Message}"
                         : plan.CanProceed
                             ? "Replacement preflight passed. No original files were changed."
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
                 reviewWindow.CopyFailure is not null ||
                 reviewWindow.CleanupFailure is not null ||
-                (reviewWindow.CopyResult is null && reviewWindow.CleanupResult is null && !plan.CanProceed)
+                reviewWindow.BackupFailure is not null ||
+                reviewWindow.BackupCleanupFailure is not null ||
+                (reviewWindow.CopyResult is null &&
+                 reviewWindow.CleanupResult is null &&
+                 reviewWindow.BackupResult is null &&
+                 reviewWindow.BackupCleanupResult is null &&
+                 !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
                 reviewWindow.CopyResult is not null
                     ? "A replacement temporary copy was created and verified."
+                    : reviewWindow.BackupResult is not null
+                        ? "An original-backup copy was created and verified."
+                    : reviewWindow.BackupCleanupResult is not null
+                        ? "An original-backup artifact was explicitly discarded."
                     : reviewWindow.CleanupResult is not null
                         ? "A replacement temporary file was explicitly discarded."
                     : reviewWindow.CopyWasCancelled
@@ -554,10 +587,19 @@ public partial class MainWindow : Window
                             ? "A replacement temporary copy failed."
                             : reviewWindow.CleanupFailure is not null
                                 ? "Replacement temporary-file cleanup failed."
+                            : reviewWindow.BackupWasCancelled
+                                ? "An original-backup copy was cancelled."
+                            : reviewWindow.BackupFailure is not null
+                                ? "An original-backup copy failed."
+                            : reviewWindow.BackupCleanupFailure is not null
+                                ? "Original-backup cleanup failed."
                             : plan.CanProceed
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
-                reviewWindow.CopyFailure ?? reviewWindow.CleanupFailure);
+                reviewWindow.CopyFailure ??
+                reviewWindow.CleanupFailure ??
+                reviewWindow.BackupFailure ??
+                reviewWindow.BackupCleanupFailure);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)

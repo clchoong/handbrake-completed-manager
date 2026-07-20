@@ -164,6 +164,28 @@ public sealed class ReplacementOperationRepository(string databasePath)
         return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
+    public async Task<bool> TryReturnToVerifiedTemporaryAsync(
+        Guid operationId,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE replacement_operations
+            SET stage = 'Verifying',
+                failure_message = NULL,
+                date_updated_utc = $updatedUtc
+            WHERE id = $id
+              AND status = 'InProgress'
+              AND stage = 'BackingUpSource'
+              AND verification_status = 'Verified';
+            """;
+        command.Parameters.AddWithValue("$id", operationId.ToString("D"));
+        command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connectionString = new SqliteConnectionStringBuilder

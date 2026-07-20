@@ -17,7 +17,9 @@ public sealed class ReplacementPreflightService
             destination.Size,
             PathExists(paths.FinalPath),
             PathExists(paths.TemporaryPath),
-            destination.LastWriteUtc);
+            destination.LastWriteUtc,
+            PathExists(paths.BackupPath) ||
+            File.Exists(Path.GetDirectoryName(paths.BackupPath)));
         return ReplacementPlanner.Create(completedEncode, snapshot);
     }
 

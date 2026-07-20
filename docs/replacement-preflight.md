@@ -12,7 +12,7 @@ Select a completed encode and choose **Review replacement**. The review displays
 - Original-backup path under `HandBrake Original Backup` in the source directory.
 - Every blocking issue and warning found from the current file-system state.
 
-When preflight passes, the window can create and verify a separate temporary file after explicit user confirmation. It cannot move, rename, back up, replace, or delete the source or converted file.
+When preflight passes, the window can create and verify a separate temporary file after explicit user confirmation. After that succeeds, a second confirmation can create and verify a separate original-backup copy. The window cannot move, rename, replace, or delete the source or converted file.
 
 ## Blocking checks
 
@@ -24,6 +24,7 @@ A future replacement cannot start when:
 - The source and converted extensions are the same.
 - A file or directory already occupies the planned final path.
 - A previous temporary-copy path already exists.
+- A file or directory already occupies the planned original-backup path.
 - The current source size differs from the size recorded at encode completion.
 - The current converted size differs from the size recorded at encode completion.
 - The converted file modification time differs from the time recorded at encode completion.
@@ -60,10 +61,9 @@ If a recorded temporary file exists, **Discard temporary file** provides an expl
 
 Passing preflight does not enable source replacement. The following must be implemented and tested before any destructive transition is available:
 
-1. Original backup with conflict-safe naming and verification.
-2. Atomic finalisation.
-3. Restart continuation decisions beyond cleanup/retry.
-4. Undo and restore-original behavior.
-5. Explicit final user confirmation.
+1. Atomic finalisation.
+2. Restart continuation decisions beyond cleanup/retry.
+3. Undo and restore-original behavior.
+4. Explicit final user confirmation.
 
 The mandatory rule remains: never remove or archive the source until the converted file has been copied to the source location and verified.

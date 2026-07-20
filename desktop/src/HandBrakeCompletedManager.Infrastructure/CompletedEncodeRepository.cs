@@ -10,7 +10,8 @@ public sealed class CompletedEncodeRepository(string databasePath)
     [
         "HandBrakeCompletedManager.Infrastructure.Migrations.001_initial.sql",
         "HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql",
-        "HandBrakeCompletedManager.Infrastructure.Migrations.003_replacement_retry_index.sql"
+        "HandBrakeCompletedManager.Infrastructure.Migrations.003_replacement_retry_index.sql",
+        "HandBrakeCompletedManager.Infrastructure.Migrations.004_original_backups.sql"
     ];
 
     private readonly string _databasePath = Path.GetFullPath(databasePath);

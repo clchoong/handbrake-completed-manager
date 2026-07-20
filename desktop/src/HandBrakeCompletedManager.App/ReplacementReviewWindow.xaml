@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Replacement safety review"
         Width="760"
-        Height="720"
+        Height="700"
         MinWidth="640"
         MinHeight="600"
         WindowStartupLocation="CenterOwner">
@@ -25,7 +25,7 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <TextBlock FontWeight="SemiBold"
-                           Text="Safety boundary — this window can only create and verify a separate temporary copy. It cannot replace or delete files."
+                           Text="Safety boundary — this window can create and verify separate temporary and original-backup copies. It cannot replace or delete the source."
                            TextWrapping="Wrap" />
             </Border>
         </StackPanel>
@@ -78,6 +78,35 @@
                            Foreground="#7A4B00"
                            TextWrapping="Wrap"
                            Visibility="Collapsed" />
+                <Border Margin="0,12,0,10" BorderBrush="#9BC2E6" BorderThickness="0,1,0,0" />
+                <TextBlock FontWeight="SemiBold" Text="Original backup preparation" />
+                <TextBlock Margin="0,4,0,8"
+                           Text="After the temporary converted copy is verified, creates and verifies a separate copy of the original source. The source is not moved or deleted."
+                           TextWrapping="Wrap" />
+                <ProgressBar x:Name="BackupProgressBar" Height="18" Minimum="0" Maximum="100" Value="0" />
+                <TextBlock x:Name="BackupStatusText" Margin="0,5,0,8" Text="Waiting for a verified temporary copy." TextWrapping="Wrap" />
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button x:Name="CreateBackupButton"
+                            Width="165"
+                            Height="30"
+                            Margin="0,0,8,0"
+                            IsEnabled="False"
+                            Click="CreateBackupButton_Click"
+                            Content="Create original backup" />
+                    <Button x:Name="CancelBackupButton"
+                            Width="105"
+                            Height="30"
+                            Margin="0,0,8,0"
+                            IsEnabled="False"
+                            Click="CancelBackupButton_Click"
+                            Content="Cancel backup" />
+                    <Button x:Name="DiscardBackupButton"
+                            Width="145"
+                            Height="30"
+                            IsEnabled="False"
+                            Click="DiscardBackupButton_Click"
+                            Content="Discard backup file" />
+                </StackPanel>
             </StackPanel>
         </Border>
 

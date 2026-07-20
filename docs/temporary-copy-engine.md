@@ -26,6 +26,8 @@ The durable operation is cancelled before the temporary file is deleted. If dele
 
 Database migration `003_replacement_retry_index.sql` no longer treats failed attempts as active operations. This permits a corrected retry when no partial artifact remains, while still preventing concurrent planned or in-progress operations for the same encode.
 
+Once a temporary copy is verified, the review window may proceed to the separate [original-backup preparation](original-backup.md) stage. Final source replacement remains disabled.
+
 ## Copy workflow
 
 Before writing, the engine:

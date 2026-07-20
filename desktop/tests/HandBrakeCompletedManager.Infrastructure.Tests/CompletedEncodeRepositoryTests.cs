@@ -57,6 +57,12 @@ public sealed class CompletedEncodeRepositoryTests
             Assert.Contains("Planned", retryIndexSql);
             Assert.Contains("InProgress", retryIndexSql);
             Assert.DoesNotContain("Failed", retryIndexSql);
+            verificationCommand.CommandText = """
+                SELECT COUNT(*)
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'replacement_backups';
+                """;
+            Assert.Equal(1L, await verificationCommand.ExecuteScalarAsync());
         }
         finally
         {

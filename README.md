@@ -49,7 +49,7 @@ The generated folder and ZIP archive are placed under `artifacts\portable\win-x6
 
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
-Phase 2 development includes replacement safety preflight, persistent recovery state, and an explicitly confirmed user workflow that creates and verifies a separate temporary copy. No source backup, replacement, or deletion operation is enabled.
+Phase 2 development includes replacement safety preflight, persistent recovery state, an explicitly confirmed temporary-copy workflow, and a separately confirmed original-backup copy. The source is never moved or deleted, and final replacement remains disabled.
 
 ## Implemented capabilities
 
@@ -72,9 +72,11 @@ The current Phase 1 implementation provides:
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
 - Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
 - A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
-- Persistent replacement stages and progress fields support interruption recovery; source backup and final replacement remain disabled.
+- Persistent replacement and original-backup stages, progress, verification, and failure fields support interruption recovery; source movement and final replacement remain disabled.
 - The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
 - Retained temporary artifacts can be permanently discarded after a separate confirmation; cleanup validates every recorded path, refuses active file locks or stale state, and immediately re-runs preflight for a safe retry.
+- After the converted temporary copy is verified, the original source can be streamed to a create-new backup path with independent progress, cancellation, durable state, and size/SHA-256 verification while the source remains untouched.
+- Verified or partial backup artifacts can be explicitly discarded through the same exact-path, stale-state, and active-lock safety boundaries.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -88,4 +90,5 @@ The current Phase 1 implementation provides:
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Replacement safety preflight](docs/replacement-preflight.md): review checks, planned paths, persistent recovery state, and disabled execution boundaries
 - [Verified temporary copy](docs/temporary-copy-engine.md): streamed copy, progress, cancellation, verification, and retained recovery artifacts
+- [Original-backup preparation](docs/original-backup.md): non-destructive source backup, verification, cancellation, cleanup, and current safety boundary
 

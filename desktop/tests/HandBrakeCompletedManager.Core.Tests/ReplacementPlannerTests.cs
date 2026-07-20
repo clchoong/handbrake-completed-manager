@@ -108,6 +108,27 @@ public sealed class ReplacementPlannerTests
         Assert.Contains(plan.Issues, issue => issue.Code == "DestinationTimestampChanged");
     }
 
+    [Fact]
+    public void Create_BlocksExistingOriginalBackupPath()
+    {
+        var record = CreateRecord();
+
+        var plan = ReplacementPlanner.Create(
+            record,
+            new ReplacementPreflightSnapshot(
+                true,
+                1_000,
+                true,
+                400,
+                false,
+                false,
+                record.DestinationLastWriteUtc,
+                BackupPathExists: true));
+
+        Assert.False(plan.CanProceed);
+        Assert.Contains(plan.Issues, issue => issue.Code == "BackupPathConflict");
+    }
+
     private static CompletedEncode CreateRecord()
     {
         var timestamp = new DateTimeOffset(2026, 7, 20, 1, 2, 3, TimeSpan.Zero);

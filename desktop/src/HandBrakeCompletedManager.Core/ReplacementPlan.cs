@@ -23,7 +23,8 @@ public sealed record ReplacementPreflightSnapshot(
     long? DestinationSize,
     bool FinalPathExists,
     bool TemporaryPathExists,
-    DateTimeOffset? DestinationLastWriteUtc = null);
+    DateTimeOffset? DestinationLastWriteUtc = null,
+    bool BackupPathExists = false);
 
 public sealed record ReplacementPlan(
     CompletedEncode CompletedEncode,
@@ -96,6 +97,11 @@ public static class ReplacementPlanner
             snapshot.TemporaryPathExists,
             "TemporaryPathConflict",
             "A temporary replacement path already exists and must be reviewed before continuing.",
+            issues);
+        AddBlockingWhen(
+            snapshot.BackupPathExists,
+            "BackupPathConflict",
+            "A file or folder already exists at the planned original-backup path.",
             issues);
 
         AddBlockingWhen(
