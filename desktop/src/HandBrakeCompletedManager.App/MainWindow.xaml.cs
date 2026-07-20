@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly SourceRecycleService _sourceRecycleService;
     private readonly FinalizationCompletionService _finalizationCompletionService;
+    private readonly SafeReplacementService _safeReplacementService;
     private readonly UndoPreparationService _undoPreparationService;
     private readonly SourceRestorationService _sourceRestorationService;
     private readonly FinalFileRecycleService _finalFileRecycleService;
@@ -82,6 +83,17 @@ public partial class MainWindow : Window
         _finalizationCompletionService = new FinalizationCompletionService(
             _replacementOperationRepository,
             _finalizationTransactionRepository);
+        _safeReplacementService = new SafeReplacementService(
+            _replacementOperationRepository,
+            _originalBackupRepository,
+            _finalizationTransactionRepository,
+            _temporaryCopyService,
+            _originalBackupService,
+            _finalizationReadinessService,
+            _finalizationPreparationService,
+            _finalizationPromotionService,
+            _sourceRecycleService,
+            _finalizationCompletionService);
         _undoPreparationService = new UndoPreparationService(
             _replacementOperationRepository,
             _finalizationTransactionRepository);
@@ -637,6 +649,7 @@ public partial class MainWindow : Window
                 _finalizationPromotionService,
                 _sourceRecycleService,
                 _finalizationCompletionService,
+                _safeReplacementService,
                 _undoPreparationService,
                 _sourceRestorationService,
                 _finalFileRecycleService,
@@ -646,7 +659,11 @@ public partial class MainWindow : Window
             };
             reviewWindow.ShowDialog();
             await LoadHistoryAsync();
-            StatusText.Text = reviewWindow.UndoCompletionResult is not null
+            StatusText.Text = reviewWindow.SafeReplacementResult is not null
+                ? "Source replacement completed safely. The converted file is in the source folder, the original is in the Windows Recycle Bin, and a verified backup remains available."
+                : reviewWindow.SafeReplacementFailure is not null
+                    ? $"One-click replacement stopped safely: {reviewWindow.SafeReplacementFailure.Message}"
+                : reviewWindow.UndoCompletionResult is not null
                 ? "Undo completed. The original source is restored, the promoted final is in the Windows Recycle Bin, and the verified backup remains available."
                 : reviewWindow.FinalFileRecycleResult is not null
                     ? "Promoted final file moved to the Windows Recycle Bin. The restored source and verified backup remain available."
@@ -692,6 +709,7 @@ public partial class MainWindow : Window
                             ? "Replacement preflight passed. No original files were changed."
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
+                reviewWindow.SafeReplacementFailure is not null ||
                 reviewWindow.CopyFailure is not null ||
                 reviewWindow.UndoFailure is not null ||
                 reviewWindow.FinalizationCompletionFailure is not null ||
@@ -707,7 +725,9 @@ public partial class MainWindow : Window
                  !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
-                reviewWindow.UndoCompletionResult is not null
+                reviewWindow.SafeReplacementResult is not null
+                    ? "The one-click safe source replacement completed atomically."
+                : reviewWindow.UndoCompletionResult is not null
                     ? "The replacement undo transaction completed atomically."
                 : reviewWindow.FinalFileRecycleResult is not null
                     ? "The promoted final file was moved to the Windows Recycle Bin during undo."
@@ -744,6 +764,7 @@ public partial class MainWindow : Window
                             : plan.CanProceed
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
+                reviewWindow.SafeReplacementFailure ??
                 reviewWindow.CopyFailure ??
                 reviewWindow.UndoFailure ??
                 reviewWindow.FinalizationCompletionFailure ??

@@ -1,21 +1,21 @@
 # Release readiness
 
-Version 0.1.0 was validated as a self-contained Windows x64 release candidate on 20 July 2026.
+Version 0.1.1 was validated as a self-contained Windows x64 release candidate on 20 July 2026.
 
 ## Validation result
 
 - The complete Release solution build succeeded with zero warnings and zero errors.
-- All 203 automated tests passed: 87 core, 56 infrastructure, and 60 finalisation tests.
+- All 205 automated tests passed: 87 core, 56 infrastructure, and 62 finalisation tests.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
 - Package verification removed all generated history, settings, logs, and temporary media before distribution.
 - Archive inspection found only the desktop executable, receiver executable, portable marker, and portable guide.
 
-The validated archive is `HandBrake-Completed-Manager-0.1.0-win-x64.zip`. Its size is 115,726,298 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.1.1-win-x64.zip`. Its size is 115,732,537 bytes and its SHA-256 checksum is:
 
 ```text
-8314521CB8DE197001ADA57B80971EEAF7A19EDC6BA3847EE21F3878C5208612
+5322E59118D5979F4CA2D752142CFE75274C03CC89E25A17FDB2C90E4BC66CAF
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -36,7 +36,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.1.0
+.\scripts\publish-portable.ps1 -Version 0.1.1
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

@@ -2,9 +2,9 @@
 
 Source recycling is the first recoverable removal step in forward finalisation. It becomes available only after the converted temporary copy has been atomically promoted and the verified original backup remains available. The action removes the original source from its path through the Windows Recycle Bin; it never requests permanent deletion.
 
-## Explicit confirmation
+## Explicit authorization
 
-The replacement review shows the exact source, promoted final, and verified backup paths. A separate **Yes/No** warning explains that the source path will become empty, Windows will retain the source in the Recycle Bin, and failure to guarantee recycling stops the operation. **No** is the default.
+The replacement review shows the exact source, promoted final, and verified backup paths. The one-click **Yes/No** warning explains that the source path will become empty, Windows will retain the source in the Recycle Bin, and failure to guarantee recycling stops the operation. That confirmation authorizes the complete ordered workflow. When recycling is invoked later through a detailed recovery control, a separate path-specific **Yes/No** warning is required. **No** is always the default.
 
 The action cannot be cancelled or the window closed after execution starts because the journal and filesystem must reach a classifiable crash boundary.
 

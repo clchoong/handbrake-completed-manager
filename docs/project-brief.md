@@ -315,7 +315,7 @@ The replacement operation is destructive, so use a safe process.
 11. Copy and verify the original source in its backup folder.
 12. Persist promotion intent, then atomically rename the copied converted file to its final name.
 13. Verify the promoted final file while the original source remains present.
-14. After separate confirmation, persist removal intent and recycle or archive the original source.
+14. After the user confirms the reviewed replacement, persist removal intent and recycle or archive the original source.
 15. Mark the record as Source Replaced.
 16. Retain a revisioned transaction journal and enough verified information to undo the replacement.
 
@@ -840,6 +840,7 @@ Build the project in phases.
 ### Phase 2: Safe source replacement
 
 * Replace Source
+* One-confirmation execution after path and safety review
 * Temporary copy
 * Live progress
 * Verification

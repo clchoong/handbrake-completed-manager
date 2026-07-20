@@ -25,7 +25,7 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <TextBlock FontWeight="SemiBold"
-                           Text="Safety boundary — each file transition requires separate confirmation. Source retirement uses only the Windows Recycle Bin and never permanent deletion."
+                           Text="Safety boundary — one confirmed replacement runs every verification in order. Source retirement uses only the Windows Recycle Bin and never permanent deletion. Detailed controls remain available for recovery."
                            TextWrapping="Wrap" />
             </Border>
         </StackPanel>
@@ -192,6 +192,14 @@
         </Border>
 
         <StackPanel Grid.Row="4" Margin="0,16,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button x:Name="SafeReplaceButton"
+                    Width="180"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    FontWeight="SemiBold"
+                    Click="SafeReplaceButton_Click"
+                    Content="Replace source safely" />
             <Button x:Name="PrepareCopyButton"
                     Width="170"
                     Height="32"

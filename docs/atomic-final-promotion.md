@@ -2,9 +2,9 @@
 
 Atomic promotion renames the verified `.hbcm-copying` artifact to its planned final filename in the same source directory. It does not move, rename, recycle, truncate, or delete the original source or its verified backup. The original converted output also remains unchanged.
 
-## User confirmation
+## User authorization
 
-Promotion is available only after a successful readiness review has persisted a `Prepared` transaction. The replacement review displays the exact temporary, final, and original-source paths and requires an explicit **Yes** confirmation. **No** is the default.
+Promotion is available only after a successful readiness review has persisted a `Prepared` transaction. In the one-click workflow, the initial path-specific replacement confirmation authorizes this stage. The detailed promotion control remains available for recovery and requires its own explicit **Yes** confirmation; **No** is the default.
 
 ## Protected operation
 
@@ -36,4 +36,4 @@ The main Recovery overview identifies operations with a finalisation journal and
 
 ## Remaining safety boundary
 
-After promotion, the source and backup remain present and verified. The desktop may then offer [Guarded source recycling](source-recycling.md) as a separate, explicitly confirmed Windows Recycle Bin operation. After forward completion, the separately prepared [guarded undo workflow](undo-workflow.md) restores the source before it can recycle the promoted final.
+After promotion, the source and backup remain present and verified. The one-click coordinator continues into [Guarded source recycling](source-recycling.md) under the original replacement confirmation. When using detailed recovery controls, recycling requires a separate path-specific confirmation. After forward completion, the separately prepared [guarded undo workflow](undo-workflow.md) restores the source before it can recycle the promoted final.
