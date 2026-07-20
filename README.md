@@ -50,7 +50,7 @@ The generated folder and ZIP archive are placed under `artifacts\portable\win-x6
 
 The initial release is limited to non-destructive completed-history management. Automatic source replacement remains outside the initial scope.
 
-Phase 2 development includes replacement safety preflight, persistent recovery state, an explicitly confirmed temporary-copy workflow, and a separately confirmed original-backup copy. The source is never moved or deleted, and final replacement remains disabled.
+Phase 2 development includes replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, and guarded atomic promotion to an unoccupied final path. The original source is never moved or deleted; source retirement and completed replacement remain disabled.
 
 ## Implemented capabilities
 
@@ -73,14 +73,15 @@ The current Phase 1 implementation provides:
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
 - Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
 - A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
-- Persistent replacement and original-backup stages, progress, verification, and failure fields support interruption recovery; source movement and final replacement remain disabled.
+- Persistent replacement, original-backup, and finalisation-journal stages support interruption recovery; source movement and completed replacement remain disabled.
 - The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
 - Retained temporary artifacts can be permanently discarded after a separate confirmation; cleanup validates every recorded path, refuses active file locks or stale state, and immediately re-runs preflight for a safe retry.
 - After the converted temporary copy is verified, the original source can be streamed to a create-new backup path with independent progress, cancellation, durable state, and size/SHA-256 verification while the source remains untouched.
 - Verified or partial backup artifacts can be explicitly discarded through the same exact-path, stale-state, and active-lock safety boundaries.
 - A read-only finalisation readiness review revalidates persisted state, exact paths, sizes, SHA-256 equality, file stability, and final-path availability without changing any file.
 - A restart-recovery overview inventories incomplete replacement operations and suggests the next safe review action; it does not perform recovery automatically.
-- Successful readiness review can persist a revisioned `Prepared` transaction journal containing the verified source and final-file digests. Legal finalisation and undo checkpoints are defined and crash recovery can inspect artifacts read-only, but no file-transition executor is enabled.
+- Successful readiness review persists a revisioned transaction journal containing verified source and final-file digests.
+- After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, and file actions.
 
 ## Documentation
@@ -97,4 +98,5 @@ The current Phase 1 implementation provides:
 - [Original-backup preparation](docs/original-backup.md): non-destructive source backup, verification, cancellation, cleanup, and current safety boundary
 - [Finalisation readiness and restart recovery](docs/finalization-readiness.md): read-only integrity gate, recovery classifications, and disabled mutation boundary
 - [Finalisation transaction design](docs/finalization-transaction-design.md): durable checkpoints, forward/undo ordering, crash decisions, and execution boundary
+- [Atomic final-file promotion](docs/atomic-final-promotion.md): confirmation, protected rename, refusal rules, and restart recovery
 

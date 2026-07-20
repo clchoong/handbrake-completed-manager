@@ -99,6 +99,43 @@ public sealed class FinalizationTransactionRepository(string databasePath)
         return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
+    public async Task<bool> TryRecordFailureAsync(
+        Guid operationId,
+        FinalizationCheckpoint expectedCheckpoint,
+        int expectedRevision,
+        string failureMessage,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (expectedRevision < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedRevision));
+        }
+
+        if (string.IsNullOrWhiteSpace(failureMessage))
+        {
+            throw new ArgumentException("A finalisation failure message is required.", nameof(failureMessage));
+        }
+
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE finalization_transactions
+            SET revision = revision + 1,
+                failure_message = $failureMessage,
+                date_updated_utc = $updatedUtc
+            WHERE operation_id = $operationId
+              AND checkpoint = $expectedCheckpoint
+              AND revision = $expectedRevision;
+            """;
+        command.Parameters.AddWithValue("$operationId", operationId.ToString("D"));
+        command.Parameters.AddWithValue("$expectedCheckpoint", expectedCheckpoint.ToString());
+        command.Parameters.AddWithValue("$expectedRevision", expectedRevision);
+        command.Parameters.AddWithValue("$failureMessage", failureMessage);
+        command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder

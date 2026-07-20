@@ -42,10 +42,9 @@ After cleanup, backup preparation may be retried. A locked, mismatched, stale, m
 Creating a verified backup does not authorize source replacement. The application still cannot:
 
 - Move or delete the original source.
-- Promote the converted temporary copy to the final source location.
 - Restore or expire backups automatically.
 - Complete or undo a replacement.
 
 A separate read-only readiness review can now verify the persisted operation and both file pairs again. Passing that review reports only that the prerequisites are currently consistent; it does not enable or perform a transition. See [Finalisation readiness and restart recovery](finalization-readiness.md).
 
-The mutating transitions still require additional transactional design, tests, and explicit final confirmation.
+Atomic promotion is now available as a separate, guarded step and leaves the source untouched. Source recycling, backup restoration, completion, and undo still require their own executors, tests, and explicit confirmations.

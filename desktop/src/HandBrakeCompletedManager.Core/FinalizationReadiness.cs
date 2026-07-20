@@ -15,6 +15,7 @@ public enum ReplacementRecoveryAction
     CreateOriginalBackup,
     DiscardBackupArtifact,
     CheckFinalizationReadiness,
+    ReviewFinalizationTransaction,
     ManualReview
 }
 

@@ -18,6 +18,7 @@ public partial class ReplacementReviewWindow : Window
     private readonly FinalizationReadinessService _finalizationReadinessService;
     private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
     private readonly FinalizationPreparationService _finalizationPreparationService;
+    private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly ReplacementPreflightService _preflightService = new();
     private ReplacementOperation? _recoveryOperation;
     private OriginalBackupState? _backupState;
@@ -26,6 +27,7 @@ public partial class ReplacementReviewWindow : Window
     private CancellationTokenSource? _backupCancellation;
     private bool _copyInProgress;
     private bool _backupInProgress;
+    private bool _promotionInProgress;
     private bool _closeWhenFinished;
 
     public ReplacementReviewWindow(
@@ -38,7 +40,8 @@ public partial class ReplacementReviewWindow : Window
         OriginalBackupCleanupService originalBackupCleanupService,
         FinalizationReadinessService finalizationReadinessService,
         FinalizationTransactionRepository finalizationTransactionRepository,
-        FinalizationPreparationService finalizationPreparationService)
+        FinalizationPreparationService finalizationPreparationService,
+        FinalizationPromotionService finalizationPromotionService)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(temporaryCopyService);
@@ -50,6 +53,7 @@ public partial class ReplacementReviewWindow : Window
         ArgumentNullException.ThrowIfNull(finalizationReadinessService);
         ArgumentNullException.ThrowIfNull(finalizationTransactionRepository);
         ArgumentNullException.ThrowIfNull(finalizationPreparationService);
+        ArgumentNullException.ThrowIfNull(finalizationPromotionService);
         _plan = plan;
         _temporaryCopyService = temporaryCopyService;
         _temporaryCopyCleanupService = temporaryCopyCleanupService;
@@ -60,6 +64,7 @@ public partial class ReplacementReviewWindow : Window
         _finalizationReadinessService = finalizationReadinessService;
         _finalizationTransactionRepository = finalizationTransactionRepository;
         _finalizationPreparationService = finalizationPreparationService;
+        _finalizationPromotionService = finalizationPromotionService;
         InitializeComponent();
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
@@ -78,6 +83,8 @@ public partial class ReplacementReviewWindow : Window
     public bool BackupWasCancelled { get; private set; }
     public Exception? BackupFailure { get; private set; }
     public Exception? BackupCleanupFailure { get; private set; }
+    public FinalizationPromotionResult? PromotionResult { get; private set; }
+    public Exception? PromotionFailure { get; private set; }
 
     private void ApplyPlan(ReplacementPlan plan)
     {
@@ -120,6 +127,7 @@ public partial class ReplacementReviewWindow : Window
             CreateBackupButton.IsEnabled = false;
             DiscardBackupButton.IsEnabled = false;
             CheckFinalizationButton.IsEnabled = false;
+            PromoteFinalButton.IsEnabled = false;
             RecoveryStatusText.Visibility = Visibility.Collapsed;
             await _operationRepository.InitializeAsync();
             var operation = await _operationRepository.GetLatestForCompletedEncodeAsync(
@@ -169,6 +177,7 @@ public partial class ReplacementReviewWindow : Window
             CreateBackupButton.IsEnabled = false;
             DiscardBackupButton.IsEnabled = false;
             CheckFinalizationButton.IsEnabled = false;
+            PromoteFinalButton.IsEnabled = false;
             if (updateCopyStatus)
             {
                 CopyStatusText.Text = "Temporary-copy preparation is disabled because recovery state could not be checked.";
@@ -237,11 +246,38 @@ public partial class ReplacementReviewWindow : Window
             operation.Stage == ReplacementOperationStage.BackingUpSource &&
             !_copyInProgress &&
             !_backupInProgress;
-        FinalizationStatusText.Text = finalizationTransaction is not null
-            ? $"Transaction checkpoint: {finalizationTransaction.Checkpoint} (revision {finalizationTransaction.Revision}). File execution and undo remain disabled."
-            : CheckFinalizationButton.IsEnabled
-                ? "Both artifacts are verified. Run the file-read-only readiness check to prepare a durable transaction design."
-                : "Finalisation remains disabled until verified temporary and original-backup artifacts are both present.";
+        PromoteFinalButton.IsEnabled =
+            (finalizationTransaction?.Checkpoint is
+                FinalizationCheckpoint.Prepared or
+                FinalizationCheckpoint.PromoteTemporaryIntentRecorded) &&
+            !_copyInProgress &&
+            !_backupInProgress &&
+            !_promotionInProgress;
+        PromoteFinalButton.Content = finalizationTransaction?.Checkpoint == FinalizationCheckpoint.PromoteTemporaryIntentRecorded
+            ? "Recover promotion"
+            : "Promote verified copy";
+        FinalizationStatusText.Foreground = finalizationTransaction?.Checkpoint switch
+        {
+            FinalizationCheckpoint.FinalPromoted => System.Windows.Media.Brushes.DarkGreen,
+            FinalizationCheckpoint.PromoteTemporaryIntentRecorded when !string.IsNullOrWhiteSpace(finalizationTransaction.FailureMessage) =>
+                System.Windows.Media.Brushes.DarkRed,
+            _ => System.Windows.Media.Brushes.Black
+        };
+        FinalizationStatusText.Text = finalizationTransaction?.Checkpoint switch
+        {
+            FinalizationCheckpoint.Prepared =>
+                $"Transaction checkpoint: Prepared (revision {finalizationTransaction.Revision}). Atomic promotion is available; the source will remain untouched.",
+            FinalizationCheckpoint.PromoteTemporaryIntentRecorded =>
+                $"Promotion recovery is required (revision {finalizationTransaction.Revision}). " +
+                $"{finalizationTransaction.FailureMessage ?? "The current artifacts will be verified before continuing."}",
+            FinalizationCheckpoint.FinalPromoted =>
+                "Final file promoted and verified. The original source and backup remain untouched; source recycling is disabled.",
+            not null =>
+                $"Transaction checkpoint: {finalizationTransaction.Checkpoint} (revision {finalizationTransaction.Revision}). Further file execution is disabled.",
+            _ when CheckFinalizationButton.IsEnabled =>
+                "Both artifacts are verified. Run the file-read-only readiness check to prepare a durable transaction design.",
+            _ => "Finalisation remains disabled until verified temporary and original-backup artifacts are both present."
+        };
     }
 
     private async void PrepareCopyButton_Click(object sender, RoutedEventArgs e)
@@ -563,9 +599,13 @@ public partial class ReplacementReviewWindow : Window
             {
                 DiscardTemporaryButton.IsEnabled = false;
                 DiscardBackupButton.IsEnabled = false;
+                PromoteFinalButton.IsEnabled =
+                    _finalizationTransaction.Checkpoint is
+                        FinalizationCheckpoint.Prepared or
+                        FinalizationCheckpoint.PromoteTemporaryIntentRecorded;
             }
             FinalizationStatusText.Text = readiness.IsReady
-                ? $"READY — transaction checkpoint {_finalizationTransaction!.Checkpoint} was persisted. File execution and undo remain disabled."
+                ? $"READY — transaction checkpoint {_finalizationTransaction!.Checkpoint} was persisted. Atomic promotion is available; source actions remain disabled."
                 : "BLOCKED — " + string.Join(" ", readiness.Issues.Select(issue => issue.Message));
             FinalizationStatusText.Foreground = readiness.IsReady
                 ? System.Windows.Media.Brushes.DarkGreen
@@ -593,6 +633,59 @@ public partial class ReplacementReviewWindow : Window
         }
     }
 
+    private async void PromoteFinalButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recoveryOperation is null ||
+            _finalizationTransaction is null ||
+            !PromoteFinalButton.IsEnabled ||
+            _promotionInProgress)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            this,
+            "Atomically promote the verified temporary copy?\n\n" +
+            $"Temporary: {_recoveryOperation.TemporaryPath}\n" +
+            $"Final: {_recoveryOperation.FinalPath}\n\n" +
+            $"The original source will remain unchanged at:\n{_recoveryOperation.SourcePath}\n\n" +
+            "The final path must be empty and will never be overwritten.",
+            "Promote verified copy",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            FinalizationStatusText.Text = "Atomic promotion cancelled. No files or transaction checkpoints were changed.";
+            return;
+        }
+
+        _promotionInProgress = true;
+        PromoteFinalButton.IsEnabled = false;
+        CheckFinalizationButton.IsEnabled = false;
+        FinalizationStatusText.Text = "Revalidating protected artifacts and recording atomic-promotion intent...";
+        try
+        {
+            PromotionResult = await _finalizationPromotionService.PromoteAsync(_recoveryOperation.Id);
+            FinalizationStatusText.Text = PromotionResult.WasRecovered
+                ? "Promotion recovery verified the final file and recorded completion. The source and backup are unchanged."
+                : "Verified copy promoted atomically. The source and backup are unchanged; source recycling remains disabled.";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        }
+        catch (Exception exception)
+        {
+            PromotionFailure = exception;
+            FinalizationStatusText.Text =
+                $"Atomic promotion stopped safely: {exception.Message} Recovery review will inspect the recorded checkpoint.";
+            FinalizationStatusText.Foreground = System.Windows.Media.Brushes.DarkRed;
+        }
+        finally
+        {
+            _promotionInProgress = false;
+            await RefreshRecoveryStateAsync(updateCopyStatus: false);
+        }
+    }
+
     private void CancelCopyButton_Click(object sender, RoutedEventArgs e)
     {
         if (!_copyInProgress || _copyCancellation is null)
@@ -607,8 +700,20 @@ public partial class ReplacementReviewWindow : Window
 
     private void ReplacementReviewWindow_Closing(object? sender, CancelEventArgs e)
     {
-        if (!_copyInProgress && !_backupInProgress)
+        if (!_copyInProgress && !_backupInProgress && !_promotionInProgress)
         {
+            return;
+        }
+
+        if (_promotionInProgress)
+        {
+            e.Cancel = true;
+            System.Windows.MessageBox.Show(
+                this,
+                "Atomic promotion is being verified and cannot be cancelled safely. Wait for it to finish before closing.",
+                "Atomic promotion in progress",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             return;
         }
 

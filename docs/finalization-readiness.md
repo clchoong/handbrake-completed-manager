@@ -37,4 +37,6 @@ Operations whose artifacts were explicitly discarded and whose cancellation stat
 
 When the integrity review passes, the application can persist a `Prepared` transaction journal containing the verified source and final-file SHA-256 digests. This changes only the local SQLite database and still does not authorize a file transition.
 
-Finalisation remains disabled. The application has no command that promotes the temporary copy, recycles the source, completes a replacement, restores a backup, or performs undo. The checkpoint design and crash-boundary recovery rules are documented in [Finalisation transaction design](finalization-transaction-design.md); each filesystem executor still requires separate implementation, confirmation, and failure testing before it can be enabled.
+The prepared temporary copy may now be promoted through the separately confirmed [atomic final-file promotion](atomic-final-promotion.md) step. Promotion leaves the original source and verified backup untouched.
+
+Source recycling and completed replacement remain disabled. The application also has no command that restores the source, recycles the promoted final file, or performs undo. The checkpoint design and remaining crash-boundary rules are documented in [Finalisation transaction design](finalization-transaction-design.md).

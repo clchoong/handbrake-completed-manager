@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly FinalizationReadinessService _finalizationReadinessService = new();
     private readonly FinalizationTransactionRepository _finalizationTransactionRepository;
     private readonly FinalizationPreparationService _finalizationPreparationService;
+    private readonly FinalizationPromotionService _finalizationPromotionService;
     private readonly ReplacementRecoveryService _replacementRecoveryService;
     private readonly HandBrakeConnectionStore _connectionStore;
     private readonly ApplicationSettingsStore _settingsStore;
@@ -63,11 +64,15 @@ public partial class MainWindow : Window
         _originalBackupCleanupService = new OriginalBackupCleanupService(
             _replacementOperationRepository,
             _originalBackupRepository);
-        _replacementRecoveryService = new ReplacementRecoveryService(
-            _replacementOperationRepository,
-            _originalBackupRepository);
         _finalizationTransactionRepository = new FinalizationTransactionRepository(_databasePath);
         _finalizationPreparationService = new FinalizationPreparationService(_finalizationTransactionRepository);
+        _finalizationPromotionService = new FinalizationPromotionService(
+            _replacementOperationRepository,
+            _finalizationTransactionRepository);
+        _replacementRecoveryService = new ReplacementRecoveryService(
+            _replacementOperationRepository,
+            _originalBackupRepository,
+            _finalizationTransactionRepository);
         _connectionStore = new HandBrakeConnectionStore(StoragePaths.ResolveConnectionsPath());
         _settingsStore = new ApplicationSettingsStore(StoragePaths.ResolveSettingsPath());
         _logger = new DiagnosticLogger(StoragePaths.ResolveLogsDirectory(), "Desktop");
@@ -577,15 +582,20 @@ public partial class MainWindow : Window
                 _originalBackupCleanupService,
                 _finalizationReadinessService,
                 _finalizationTransactionRepository,
-                _finalizationPreparationService)
+                _finalizationPreparationService,
+                _finalizationPromotionService)
             {
                 Owner = this
             };
             reviewWindow.ShowDialog();
-            StatusText.Text = reviewWindow.CopyResult is not null
-                ? "Verified temporary copy created. Original backup can now be prepared; final replacement remains disabled."
+            StatusText.Text = reviewWindow.PromotionResult is not null
+                ? "Verified temporary copy promoted to its final path. The original source and backup remain untouched."
+                : reviewWindow.PromotionFailure is not null
+                    ? $"Atomic promotion requires recovery review: {reviewWindow.PromotionFailure.Message}"
+                : reviewWindow.CopyResult is not null
+                    ? "Verified temporary copy created. Original backup can now be prepared; final replacement remains disabled."
                 : reviewWindow.BackupResult is not null
-                    ? "Verified original-backup copy created. The source remains in place and final replacement is disabled."
+                    ? "Verified original-backup copy created. The source remains in place; finalisation readiness can now be checked."
                 : reviewWindow.BackupCleanupResult is not null
                     ? "Original-backup artifact discarded. The source and verified temporary copy remain unchanged."
                 : reviewWindow.CleanupResult is not null
@@ -607,6 +617,7 @@ public partial class MainWindow : Window
                             : "Replacement preflight found blocking issues. No files were changed.";
             _ = _logger.LogAsync(
                 reviewWindow.CopyFailure is not null ||
+                reviewWindow.PromotionFailure is not null ||
                 reviewWindow.CleanupFailure is not null ||
                 reviewWindow.BackupFailure is not null ||
                 reviewWindow.BackupCleanupFailure is not null ||
@@ -617,7 +628,9 @@ public partial class MainWindow : Window
                  !plan.CanProceed)
                     ? DiagnosticLogLevel.Warning
                     : DiagnosticLogLevel.Information,
-                reviewWindow.CopyResult is not null
+                reviewWindow.PromotionResult is not null
+                    ? "A verified temporary copy was atomically promoted; the source was unchanged."
+                : reviewWindow.CopyResult is not null
                     ? "A replacement temporary copy was created and verified."
                     : reviewWindow.BackupResult is not null
                         ? "An original-backup copy was created and verified."
@@ -641,6 +654,7 @@ public partial class MainWindow : Window
                                 ? "A replacement preflight review passed."
                                 : "A replacement preflight review found blocking issues.",
                 reviewWindow.CopyFailure ??
+                reviewWindow.PromotionFailure ??
                 reviewWindow.CleanupFailure ??
                 reviewWindow.BackupFailure ??
                 reviewWindow.BackupCleanupFailure);

@@ -27,6 +27,12 @@ public sealed record FinalizationTransaction(
     DateTimeOffset DateCreatedUtc,
     DateTimeOffset DateUpdatedUtc);
 
+public sealed record FinalizationPromotionResult(
+    Guid OperationId,
+    string FinalPath,
+    string Sha256,
+    bool WasRecovered);
+
 public static class FinalizationStateMachine
 {
     private static readonly IReadOnlyDictionary<FinalizationCheckpoint, IReadOnlySet<FinalizationCheckpoint>> Transitions =

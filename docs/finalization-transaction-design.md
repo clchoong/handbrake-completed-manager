@@ -1,6 +1,6 @@
 # Finalisation transaction design
 
-Finalisation and undo are modelled as revisioned, durable transactions. This milestone defines and persists the transaction but does not execute any file transition.
+Finalisation and undo are modelled as revisioned, durable transactions. Atomic temporary-to-final promotion is the only enabled file transition; all source and undo transitions remain disabled.
 
 ## Preparation boundary
 
@@ -48,6 +48,6 @@ Recovery never infers success from the journal alone. The read-only assessor has
 
 The verified backup is mandatory throughout forward and undo recovery. Every legal state-machine edge and both outcomes around each filesystem crash boundary are covered by automated tests. Repository tests cover preparation gates, idempotency, digest mismatch, revision conflicts, skipped checkpoints, and migration upgrades.
 
-## Disabled execution boundary
+## Current execution boundary
 
-The desktop review displays the persisted checkpoint but provides no command to advance it. No service in this milestone renames the temporary file, recycles the source, restores the source, recycles the final file, or marks finalisation/undo complete. The first executable milestone should be limited to atomic temporary promotion while leaving the source untouched.
+The desktop review may advance `Prepared` through `PromoteTemporaryIntentRecorded` to `FinalPromoted` by the guarded process documented in [Atomic final-file promotion](atomic-final-promotion.md). No service recycles the source, restores the source, recycles the final file, or marks finalisation/undo complete.
