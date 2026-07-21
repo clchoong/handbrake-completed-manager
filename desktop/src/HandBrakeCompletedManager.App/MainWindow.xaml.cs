@@ -847,10 +847,13 @@ public partial class MainWindow : Window
             var warning = plan.Issues
                 .FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Warning)?
                 .Message;
+            var replacesSourceInPlace = PathsEqual(row.SourcePath, plan.Paths.FinalPath);
+            var replacementSafety = replacesSourceInPlace
+                ? "After verification, Windows atomically replaces the original source path. A verified original backup is retained for recovery, and the existing HandBrake output is kept."
+                : "Only after verification, the original source moves to the Windows Recycle Bin. A verified backup is retained for Undo, and the existing HandBrake output is kept.";
             var safetyText =
                 $"The converted file will be copied and verified at:\n{plan.Paths.FinalPath}\n\n" +
-                "Only after verification, the original source moves to the Windows Recycle Bin. " +
-                "A verified backup is retained for Undo, and the existing HandBrake output is kept." +
+                replacementSafety +
                 (string.IsNullOrWhiteSpace(warning) ? string.Empty : $"\n\nNote: {warning}");
             var confirmation = new FileActionConfirmationWindow(
                 "Replace source",

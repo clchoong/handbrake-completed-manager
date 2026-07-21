@@ -125,6 +125,7 @@ The current Phase 1 implementation provides:
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
 - [Version 0.7.0 release notes](docs/releases/v0.7.0.md): simplified replacement, responsive bulk removal, Settings scrolling, and About
 - [Version 0.7.1 release notes](docs/releases/v0.7.1.md): same-extension source replacement and reliable first-paint progress dialogs
+- [Version 0.7.2 release notes](docs/releases/v0.7.2.md): corrected same-extension replacement messaging
 - [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum

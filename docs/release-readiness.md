@@ -1,6 +1,6 @@
 # Release readiness
 
-Version 0.7.1 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.7.2 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
@@ -31,12 +31,12 @@ Version 0.7.1 was validated as a self-contained Windows x64 open-source release 
 - Bulk history removal shows current-item and overall progress in a separate responsive window until final totals are available.
 - Settings content scrolls independently of its footer, keeping diagnostic-log controls reachable at smaller sizes and display scaling.
 - The About window reports the packaged assembly version, MIT licence, independence notice, platform, runtime, architecture, storage boundary, and project links.
-- Packaged executable metadata reports product version `0.7.1`, company `clchoong`, and the expected copyright.
+- Packaged executable metadata reports product version `0.7.2`, company `clchoong`, and the expected copyright.
 
-The validated archive is `HandBrake-Completed-Manager-0.7.1-win-x64.zip`. Its size is 116,216,331 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.7.2-win-x64.zip`. Its size is 116,216,355 bytes and its SHA-256 checksum is:
 
 ```text
-30B4579AA5EC140645A7ED1A365ABC54EC15531E3E3E052997F36F29E0CF6FE3
+5F03F65025CD994DB35271895673AC2C4411502E2DC733DB3846521F3E59552B
 ```
 
 Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
@@ -58,7 +58,7 @@ From the repository root with the .NET 10 SDK installed:
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.7.1
+.\scripts\publish-portable.ps1 -Version 0.7.2
 ```
 
 The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

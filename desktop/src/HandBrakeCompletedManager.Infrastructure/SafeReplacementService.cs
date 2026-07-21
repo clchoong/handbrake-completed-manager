@@ -81,7 +81,9 @@ public sealed class SafeReplacementService(
 
         progress?.Report(new SafeReplacementProgress(
             SafeReplacementStage.RecyclingOriginalSource,
-            "Revalidating all artifacts and moving the original source to the Windows Recycle Bin..."));
+            PathsEqual(operation.SourcePath, operation.FinalPath)
+                ? "Revalidating the atomic replacement and verified original backup..."
+                : "Revalidating all artifacts and moving the original source to the Windows Recycle Bin..."));
         await sourceRecycleService.RecycleAsync(operation.Id, CancellationToken.None);
 
         progress?.Report(new SafeReplacementProgress(
@@ -123,4 +125,7 @@ public sealed class SafeReplacementService(
     {
         public void Report(T value) => report(value);
     }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

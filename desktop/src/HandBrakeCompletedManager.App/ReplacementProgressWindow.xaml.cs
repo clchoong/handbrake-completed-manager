@@ -70,7 +70,9 @@ public partial class ReplacementProgressWindow : Window
             SafeReplacementStage.BackingUpOriginalSource => (45d, 38d, "Protecting original source"),
             SafeReplacementStage.VerifyingAllArtifacts => (84d, 3d, "Verifying files"),
             SafeReplacementStage.PromotingConvertedFile => (88d, 4d, "Installing converted file"),
-            SafeReplacementStage.RecyclingOriginalSource => (93d, 4d, "Moving original to Recycle Bin"),
+            SafeReplacementStage.RecyclingOriginalSource => PathsEqual(_plan.CompletedEncode.SourcePath, _plan.Paths.FinalPath)
+                ? (93d, 4d, "Recording atomic source replacement")
+                : (93d, 4d, "Moving original to Recycle Bin"),
             SafeReplacementStage.CompletingTransaction => (98d, 1d, "Finishing replacement"),
             _ => (0d, 0d, "Replacing source")
         };
