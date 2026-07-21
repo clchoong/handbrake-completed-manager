@@ -72,17 +72,17 @@ The current Phase 1 implementation provides:
 - SQLite stores completed history and rejects repeated callbacks with the same fingerprint.
 - Saved HandBrake activity logs can recover earlier successful encodes when the output still exists; paused, failed, malformed, missing-output, and duplicate logs are reviewed but skipped without modifying logs or media files.
 - The WPF application displays history and aggregate size totals.
-- History refreshes automatically while the application is open.
+- History checks for receiver updates automatically while the application is open, but leaves the list and selection untouched when nothing changed.
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
 - Test Pipeline validates the event-to-SQLite path in an isolated temporary database.
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
-- Selected history records support source/output playback and Explorer reveal; double-click opens the output.
+- Selected history records support source/output playback and Explorer reveal; double-click opens the output, or the replacement file after the output has been consumed.
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
 - Ctrl-click, Shift-click, Ctrl+A, **Select all shown**, and **Clear selection** support deliberate multi-row management while single-file playback and reveal actions remain limited to one row.
 - The history Status column records meaningful file outcomes: **Output Deleted**, **Source Replaced**, or **Source Replaced, Output Kept**.
 - **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
 - Bulk output recycling lists every selected path, skips initially ineligible records, revalidates and recycles eligible outputs sequentially, supports stopping between items, and reports succeeded, failed, and skipped totals.
-- Bulk source replacement lists every source and target, blocks duplicate targets, supports the same output-retention choice, and runs selected items sequentially.
+- Bulk source replacement lists every source and target, blocks duplicate targets, supports the same output-retention choice, and advances through every selected item without a per-item Done confirmation.
 - Bulk Remove from History deletes only the selected SQLite records and never changes source or output files.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
@@ -129,6 +129,7 @@ The current Phase 1 implementation provides:
 - [Version 0.7.1 release notes](docs/releases/v0.7.1.md): same-extension source replacement and reliable first-paint progress dialogs
 - [Version 0.7.2 release notes](docs/releases/v0.7.2.md): corrected same-extension replacement messaging
 - [Version 0.8.0 release notes](docs/releases/v0.8.0.md): direct cancellable replacement, output-retention choice, meaningful statuses, and popup rendering fixes
+- [Version 0.8.1 release notes](docs/releases/v0.8.1.md): replacement playback, automatic bulk progression, stable refresh selection, table polish, and legacy-history removal
 - [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum

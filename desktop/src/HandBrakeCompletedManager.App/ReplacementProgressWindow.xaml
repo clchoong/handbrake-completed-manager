@@ -19,7 +19,7 @@
         <Border Padding="26,20" Background="{StaticResource NavyBrush}">
             <StackPanel>
                 <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="White" Text="Replacing the source file" />
-                <TextBlock Margin="0,5,0,0" Foreground="#AEB9CA" Text="The safety checks run automatically while progress remains visible" />
+                <TextBlock Margin="0,5,0,0" Foreground="#AEB9CA" Text="The direct file transfer runs automatically while progress remains visible" />
             </StackPanel>
         </Border>
 

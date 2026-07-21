@@ -67,6 +67,22 @@ public sealed class CompletedEncodeRepository(string databasePath)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var replacementCommand = connection.CreateCommand())
+        {
+            replacementCommand.Transaction = (SqliteTransaction)transaction;
+            replacementCommand.CommandText = """
+                DELETE FROM replacement_backups
+                WHERE operation_id IN (
+                    SELECT id FROM replacement_operations WHERE completed_encode_id = $id);
+                DELETE FROM finalization_transactions
+                WHERE operation_id IN (
+                    SELECT id FROM replacement_operations WHERE completed_encode_id = $id);
+                DELETE FROM replacement_operations WHERE completed_encode_id = $id;
+                """;
+            replacementCommand.Parameters.AddWithValue("$id", recordId.ToString("D"));
+            await replacementCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         await using (var actionCommand = connection.CreateCommand())
         {
             actionCommand.Transaction = (SqliteTransaction)transaction;
@@ -192,7 +208,7 @@ public sealed class CompletedEncodeRepository(string databasePath)
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA busy_timeout = 5000;";
+        command.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
         await command.ExecuteNonQueryAsync(cancellationToken);
         return connection;
     }

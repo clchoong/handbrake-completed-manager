@@ -278,7 +278,7 @@ public partial class MainWindow : Window
 
     private async void HistoryRefreshTimer_Tick(object? sender, EventArgs e)
     {
-        await LoadHistoryAsync();
+        await LoadHistoryAsync(isAutomaticRefresh: true);
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
@@ -797,7 +797,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        RunFileAction(_fileActions.Play, historyRow.DestinationPath);
+        RunFileAction(_fileActions.Play, historyRow.PlaybackPath);
         e.Handled = true;
     }
 
@@ -940,7 +940,11 @@ public partial class MainWindow : Window
             foreach (var row in eligible)
             {
                 StatusText.Text = $"Replacing {succeeded + failed + cancelled + 1:N0} of {eligible.Length:N0}: {row.SourceFilename}";
-                var progressWindow = new ReplacementProgressWindow(row.Record, keepOutput, _directReplacementService)
+                var progressWindow = new ReplacementProgressWindow(
+                    row.Record,
+                    keepOutput,
+                    _directReplacementService,
+                    closeWhenFinished: true)
                 {
                     Owner = this
                 };
@@ -1642,7 +1646,7 @@ public partial class MainWindow : Window
         StatusText.Text = result.Message;
     }
 
-    private async Task LoadHistoryAsync()
+    private async Task LoadHistoryAsync(bool isAutomaticRefresh = false)
     {
         if (_isLoadingHistory)
         {
@@ -1653,19 +1657,36 @@ public partial class MainWindow : Window
         {
             _isLoadingHistory = true;
             RefreshButton.IsEnabled = false;
-            StatusText.Text = "Loading completed history...";
+            if (!isAutomaticRefresh)
+            {
+                StatusText.Text = "Loading completed history...";
+            }
+
+            var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
             await _repository.InitializeAsync();
             var records = await _repository.GetAllAsync();
             var replacementStates = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
-            var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
+            var refreshedRows = records.Select(record => HistoryRow.From(
+                record,
+                replacementStates.GetValueOrDefault(
+                    record.Id,
+                    SourceReplacementState.NotReplaced))).ToArray();
+
+            if (HistoryRows.SequenceEqual(refreshedRows))
+            {
+                UpdateSummary(records);
+                if (!isAutomaticRefresh)
+                {
+                    StatusText.Text = $"{records.Count:N0} record(s) - {_databasePath}";
+                }
+
+                return;
+            }
 
             HistoryRows.Clear();
-            foreach (var record in records)
+            foreach (var row in refreshedRows)
             {
-                var replacementState = replacementStates.GetValueOrDefault(
-                    record.Id,
-                    SourceReplacementState.NotReplaced);
-                HistoryRows.Add(HistoryRow.From(record, replacementState));
+                HistoryRows.Add(row);
             }
 
             ApplyHistoryFilter();
@@ -1679,7 +1700,9 @@ public partial class MainWindow : Window
             }
 
             UpdateSummary(records);
-            StatusText.Text = $"{records.Count:N0} record(s) - {_databasePath}";
+            StatusText.Text = isAutomaticRefresh
+                ? $"History updated automatically - {records.Count:N0} record(s)."
+                : $"{records.Count:N0} record(s) - {_databasePath}";
         }
         catch (Exception exception)
         {
@@ -1742,6 +1765,7 @@ public sealed record HistoryRow(
     public Guid Id => Record.Id;
     public string SourcePath => Record.ReplacementPath ?? Record.SourcePath;
     public string DestinationPath => Record.DestinationPath;
+    public string PlaybackPath => OutputAvailable ? DestinationPath : SourcePath;
     public bool SourceAvailable => Record.ReplacementPath is not null || Record.SourceExists;
     public bool OutputAvailable => Record.FileActionStatus switch
     {

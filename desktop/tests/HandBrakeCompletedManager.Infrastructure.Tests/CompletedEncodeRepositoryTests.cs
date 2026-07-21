@@ -149,6 +149,7 @@ public sealed class CompletedEncodeRepositoryTests
         await File.WriteAllTextAsync(sourcePath, "source-content");
         await File.WriteAllTextAsync(destinationPath, "output-content");
         var repository = new CompletedEncodeRepository(Path.Combine(testDirectory, "history.db"));
+        var operationRepository = new ReplacementOperationRepository(Path.Combine(testDirectory, "history.db"));
         var completedAt = new DateTimeOffset(2026, 7, 20, 1, 2, 3, TimeSpan.Zero);
         var record = new CompletedEncode(
             Guid.NewGuid(),
@@ -177,6 +178,30 @@ public sealed class CompletedEncodeRepositoryTests
         {
             await repository.InitializeAsync();
             Assert.True(await repository.AddAsync(record));
+            var operation = new ReplacementOperation(
+                Guid.NewGuid(),
+                record.Id,
+                ReplacementOperationStatus.Completed,
+                ReplacementOperationStage.Completed,
+                record.SourcePath,
+                record.DestinationPath,
+                Path.ChangeExtension(record.SourcePath, record.DestinationExtension),
+                Path.ChangeExtension(record.SourcePath, record.DestinationExtension) + ".hbcm-copying",
+                record.SourcePath + ".backup",
+                record.SourceSize!.Value,
+                record.DestinationSize!.Value,
+                record.DestinationSize.Value,
+                ReplacementVerificationStatus.Verified,
+                null,
+                completedAt,
+                completedAt);
+            await operationRepository.AddAsync(operation);
+            await repository.UpsertFileActionAsync(
+                record.Id,
+                Path.ChangeExtension(record.SourcePath, record.DestinationExtension),
+                "Source Replaced",
+                false,
+                completedAt);
 
             var removed = await repository.RemoveFromHistoryAsync(record.Id);
             var removedAgain = await repository.RemoveFromHistoryAsync(record.Id);
@@ -185,6 +210,7 @@ public sealed class CompletedEncodeRepositoryTests
             Assert.True(removed);
             Assert.False(removedAgain);
             Assert.Empty(records);
+            Assert.Null(await operationRepository.GetByIdAsync(operation.Id));
             Assert.True(File.Exists(sourcePath));
             Assert.True(File.Exists(destinationPath));
             Assert.Equal("source-content", await File.ReadAllTextAsync(sourcePath));

@@ -361,14 +361,14 @@
                                   PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
-                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" SortMemberPath="Status" Width="205" />
-                                <DataGridTextColumn Header="SOURCE" Binding="{Binding SourceFilename}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="170" />
-                                <DataGridTextColumn Header="ORIGINAL" Binding="{Binding SourceSize}" SortMemberPath="Record.SourceSize" Width="110" />
-                                <DataGridTextColumn Header="CONVERTED" Binding="{Binding DestinationSize}" SortMemberPath="Record.DestinationSize" Width="115" />
-                                <DataGridTextColumn Header="OUTPUT SIZE" Binding="{Binding OutputPercentage}" SortMemberPath="Record.OutputPercentage" Width="105" />
-                                <DataGridTextColumn Header="SAVED" Binding="{Binding SpaceSaved}" SortMemberPath="Record.SpaceSavedBytes" Width="110" />
-                                <DataGridTextColumn Header="CONVERTED FILE" Binding="{Binding DestinationFilename}" SortMemberPath="Record.DestinationFilename" Width="*" MinWidth="170" />
+                                <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
+                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Status" Width="205" />
+                                <DataGridTextColumn Header="SOURCE" Binding="{Binding SourceFilename}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="170" />
+                                <DataGridTextColumn Header="ORIGINAL" Binding="{Binding SourceSize}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SourceSize" Width="110" />
+                                <DataGridTextColumn Header="CONVERTED" Binding="{Binding DestinationSize}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.DestinationSize" Width="115" />
+                                <DataGridTextColumn Header="OUTPUT SIZE" Binding="{Binding OutputPercentage}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.OutputPercentage" Width="105" />
+                                <DataGridTextColumn Header="SAVED" Binding="{Binding SpaceSaved}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SpaceSavedBytes" Width="110" />
+                                <DataGridTextColumn Header="CONVERTED FILE" Binding="{Binding DestinationFilename}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.DestinationFilename" Width="*" MinWidth="170" />
                             </DataGrid.Columns>
                         </DataGrid>
 
