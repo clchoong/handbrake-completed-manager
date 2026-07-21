@@ -703,6 +703,19 @@ public partial class MainWindow : Window
         PageScrollViewer.ScrollToVerticalOffset(PageScrollViewer.VerticalOffset - e.Delta);
     }
 
+    private void HistoryGrid_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Delete || _bulkOperationInProgress || HistoryGrid.SelectedItems.Count == 0)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        RemoveHistoryButton_Click(
+            RemoveHistoryButton,
+            new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+    }
+
     private static T? FindVisualChild<T>(DependencyObject parent)
         where T : DependencyObject
     {

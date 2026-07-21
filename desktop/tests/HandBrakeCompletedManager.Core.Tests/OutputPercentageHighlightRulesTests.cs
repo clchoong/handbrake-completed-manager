@@ -6,11 +6,11 @@ public sealed class OutputPercentageHighlightRulesTests
 {
     [Theory]
     [InlineData(null, OutputPercentageHighlight.None)]
-    [InlineData(80.0, OutputPercentageHighlight.None)]
-    [InlineData(80.01, OutputPercentageHighlight.PaleOrange)]
-    [InlineData(89.99, OutputPercentageHighlight.PaleOrange)]
-    [InlineData(90.0, OutputPercentageHighlight.PaleRed)]
-    [InlineData(100.0, OutputPercentageHighlight.PaleRed)]
+    [InlineData(79.99, OutputPercentageHighlight.None)]
+    [InlineData(80.0, OutputPercentageHighlight.Orange)]
+    [InlineData(89.99, OutputPercentageHighlight.Orange)]
+    [InlineData(90.0, OutputPercentageHighlight.Red)]
+    [InlineData(100.0, OutputPercentageHighlight.Red)]
     public void Classify_UsesRequestedThresholds(
         double? percentage,
         OutputPercentageHighlight expected)

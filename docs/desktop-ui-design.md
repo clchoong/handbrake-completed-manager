@@ -28,9 +28,9 @@ This keeps the normal path aligned with familiar cut-and-paste behavior. Legacy 
 
 `Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, settings, progress, and About windows consume the same resources.
 
-The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**. A leading 1-based number follows the current filter and sort order. Padded, vertically centred cells and column-header dividers keep dense rows readable. Output percentages above 80% use pale orange; values at or above 90% use pale red.
+The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**. A leading 1-based number follows the current filter and sort order; its selected state uses the accent background and white text. Headers and vertically centred cells share 16-by-6 padding and column-header dividers keep dense rows readable. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values at or above 90% use the equivalent red treatment regardless of row selection.
 
-Bulk replacement has a single resizable progress surface. It combines an item-based overall bar and `processed/total` counter with a byte-based bar and status for every eligible file, keeping completed, failed, cancelled, waiting, and skipped items visible together.
+Bulk replacement has a single resizable progress surface. It combines a continuously updated overall bar and `processed/total` counter with a byte-based bar and status for every eligible file. The overall percentage includes the active item's fractional byte progress while keeping completed, failed, cancelled, waiting, and skipped items visible together.
 
 All secondary windows opt into WPF software rendering and invalidate their first rendered frame. This avoids transparent or blank popup surfaces seen with some Windows graphics-driver and compositor combinations.
 

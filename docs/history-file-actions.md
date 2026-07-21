@@ -20,11 +20,13 @@ The visible-result count updates whenever search text, a quick filter, or histor
 
 The first column numbers the currently displayed rows from 1 in their active filtered and sorted order. Select any sortable column heading to reorder the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
 
-All cells use horizontal and vertical padding to keep text away from row and column edges. The **Output Size** percentage is pale orange when the converted file exceeds 80% of the original size and pale red when it reaches 90% or more.
+Column headers and data cells use the same horizontal and vertical padding. The selected row-number cell uses the Replace Source orange with white text. **Output Size** values from 80% through 89% use that same solid orange and white text in both selected and unselected rows; values from 90% use the equivalent solid red treatment. Values below 80% retain the normal table style.
 
 Selecting one row displays its completion time, file-action status, full source and output paths, size comparison, exit code, and current file availability. Automatic refresh first compares the latest database result with the displayed rows. It does not rebuild an unchanged list, and selected records remain selected when changed data is applied and they still match the active filter.
 
 Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
+
+Press **Delete** while the history table is focused to open the same confirmed **Remove History** workflow for the current selection. Multiple selected rows use the existing bulk confirmation. The shortcut never bypasses confirmation and never deletes a media file.
 
 The **Status** column is reserved for file-management outcomes rather than repeating HandBrake's completed state. It displays **Output Deleted**, **Source Replaced**, or **Source Replaced, Output Kept**. Untouched records leave this field blank.
 
@@ -69,6 +71,6 @@ When more than one row is selected, the primary actions change to **Replace sele
 
 Every bulk action opens a scrollable confirmation window listing every selected source and output or target path. Initially blocked items remain visible and are skipped. Eligible items run one at a time, never in parallel. **Stop after current** allows the active verified item to reach a safe boundary before the remaining items are skipped.
 
-Bulk source replacement uses the same direct move/copy behavior as the single-record workflow. The user chooses whether outputs are consumed or kept, and cross-selection conflicts resolving to the same final path are blocked before confirmation. After the one bulk confirmation, one persistent progress window lists every eligible item. Each item has its own byte-progress bar and status, while an overall item-based bar and `processed/total` counter advance after each attempt. **Stop after current** finishes the active item safely; **Cancel current & stop** is enabled during a cancellable copy.
+Bulk source replacement uses the same direct move/copy behavior as the single-record workflow. The user chooses whether outputs are consumed or kept, and cross-selection conflicts resolving to the same final path are blocked before confirmation. After the one bulk confirmation, one persistent progress window lists every eligible item. Each item has its own byte-progress bar and status. The overall bar combines completed items with the active item's live byte percentage, while the `processed/total` counter increments only after an attempt finishes. **Stop after current** finishes the active item safely; **Cancel current & stop** is enabled during a cancellable copy.
 
 Bulk output recycling revalidates each output immediately before invoking the Windows Recycle Bin and never falls back to permanent deletion. Bulk history removal changes only SQLite records. After confirmation closes, bulk history removal opens a separate live progress window before processing begins; the window remains responsive, identifies the current item, and stays visible with the final removed, failed, and skipped totals. Each workflow ends with succeeded, failed, and skipped totals.

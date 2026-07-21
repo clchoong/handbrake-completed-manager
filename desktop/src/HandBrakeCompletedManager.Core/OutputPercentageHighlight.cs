@@ -3,16 +3,16 @@ namespace HandBrakeCompletedManager.Core;
 public enum OutputPercentageHighlight
 {
     None,
-    PaleOrange,
-    PaleRed
+    Orange,
+    Red
 }
 
 public static class OutputPercentageHighlightRules
 {
     public static OutputPercentageHighlight Classify(double? percentage) => percentage switch
     {
-        >= 90 => OutputPercentageHighlight.PaleRed,
-        > 80 => OutputPercentageHighlight.PaleOrange,
+        >= 90 => OutputPercentageHighlight.Red,
+        >= 80 => OutputPercentageHighlight.Orange,
         _ => OutputPercentageHighlight.None
     };
 }

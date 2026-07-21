@@ -15,6 +15,7 @@ public partial class BulkReplacementProgressWindow : Window
     private readonly TaskCompletionSource _rendered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _isRunning = true;
     private int _activeIndex = -1;
+    private int _processedItems;
 
     public BulkReplacementProgressWindow(IReadOnlyList<string> fileNames)
     {
@@ -52,6 +53,7 @@ public partial class BulkReplacementProgressWindow : Window
         item.Status = progress.Message;
         item.StatusBrush = MediaBrushes.DimGray;
         CancelCurrentButton.IsEnabled = index == _activeIndex && progress.CanCancel;
+        UpdateOverallProgress(_processedItems + progress.Percentage / 100d);
     }
 
     public void CompleteItem(int index, string status, bool succeeded, bool cancelled)
@@ -70,9 +72,15 @@ public partial class BulkReplacementProgressWindow : Window
 
     public void ReportOverall(int processed)
     {
-        var percentage = BulkProgressRules.CalculatePercentage(processed, Items.Count);
-        OverallProgressBar.Value = percentage;
+        _processedItems = processed;
         OverallCountText.Text = $"{processed:N0}/{Items.Count:N0}";
+        UpdateOverallProgress(processed);
+    }
+
+    private void UpdateOverallProgress(double processedItems)
+    {
+        var percentage = BulkProgressRules.CalculatePercentage(processedItems, Items.Count);
+        OverallProgressBar.Value = percentage;
         OverallPercentageText.Text = $"{percentage:0}%";
     }
 

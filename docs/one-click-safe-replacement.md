@@ -30,4 +30,4 @@ The operation refuses the same physical source/output file and unrelated occupie
 
 ## Bulk progress
 
-Bulk replacement uses one progress window for the entire confirmed selection. Every eligible file has an individual byte-based progress bar and current stage. The total bar is item-based: for five items it begins at `0/5` and advances to 20% and `1/5` after the first item finishes. Failed and cancelled attempts count as processed so the total reflects how much of the batch has been attempted, while their individual status remains clearly marked.
+Bulk replacement uses one progress window for the entire confirmed selection. Every eligible file has an individual byte-based progress bar and current stage. The total bar updates continuously: in a five-item batch, 50% progress through the first item produces 10% total progress; completing it produces 20% and changes the counter from `0/5` to `1/5`. Failed and cancelled attempts count as processed so the total reflects how much of the batch has been attempted, while their individual status remains clearly marked.

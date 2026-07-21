@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:HandBrakeCompletedManager.App"
+        xmlns:core="clr-namespace:HandBrakeCompletedManager.Core;assembly=HandBrakeCompletedManager.Core"
         Title="HandBrake Completed Manager"
         Height="900"
         Width="1400"
@@ -10,12 +11,33 @@
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <local:OneBasedIndexConverter x:Key="OneBasedIndexConverter" />
-        <local:OutputPercentageBackgroundConverter x:Key="OutputPercentageBackgroundConverter" />
+        <local:OutputPercentageHighlightConverter x:Key="OutputPercentageHighlightConverter" />
+        <Style x:Key="NumberCellStyle"
+               TargetType="DataGridCell"
+               BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Setter Property="Foreground" Value="{StaticResource InkMutedBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="White" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="OutputPercentageCellStyle"
                TargetType="DataGridCell"
                BasedOn="{StaticResource {x:Type DataGridCell}}">
-            <Setter Property="Background"
-                    Value="{Binding Record.OutputPercentage, Converter={StaticResource OutputPercentageBackgroundConverter}}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Record.OutputPercentage, Converter={StaticResource OutputPercentageHighlightConverter}}"
+                             Value="{x:Static core:OutputPercentageHighlight.Orange}">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Record.OutputPercentage, Converter={StaticResource OutputPercentageHighlightConverter}}"
+                             Value="{x:Static core:OutputPercentageHighlight.Red}">
+                    <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
     <Grid>
@@ -370,16 +392,17 @@
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
+                                  PreviewKeyDown="HistoryGrid_PreviewKeyDown"
                                   PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="#" Width="56" CanUserSort="False">
+                                <DataGridTemplateColumn Header="#" Width="56" CanUserSort="False" CellStyle="{StaticResource NumberCellStyle}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource InkMutedBrush}"
+                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type DataGridCell}}}"
                                                        Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type DataGridRow}}, Path=AlternationIndex, Converter={StaticResource OneBasedIndexConverter}}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
