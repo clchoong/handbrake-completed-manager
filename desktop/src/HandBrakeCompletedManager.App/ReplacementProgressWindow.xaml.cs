@@ -13,22 +13,19 @@ public partial class ReplacementProgressWindow : Window
     private readonly CompletedEncode _record;
     private readonly bool _keepOutput;
     private readonly DirectSourceReplacementService _service;
-    private readonly bool _closeWhenFinished;
     private readonly CancellationTokenSource _cancellation = new();
     private bool _isRunning = true;
 
     public ReplacementProgressWindow(
         CompletedEncode record,
         bool keepOutput,
-        DirectSourceReplacementService service,
-        bool closeWhenFinished = false)
+        DirectSourceReplacementService service)
     {
         InitializeComponent();
         PopupWindowRendering.Stabilize(this);
         _record = record;
         _keepOutput = keepOutput;
         _service = service;
-        _closeWhenFinished = closeWhenFinished;
         FileNameText.Text = Path.GetFileName(record.SourcePath);
         ContentRendered += ReplacementProgressWindow_ContentRendered;
         Closing += ReplacementProgressWindow_Closing;
@@ -80,11 +77,6 @@ public partial class ReplacementProgressWindow : Window
             _isRunning = false;
             CancelButton.IsEnabled = false;
             CloseButton.IsEnabled = true;
-            if (_closeWhenFinished)
-            {
-                await Dispatcher.Yield(DispatcherPriority.Render);
-                Close();
-            }
         }
     }
 

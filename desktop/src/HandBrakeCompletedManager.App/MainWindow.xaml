@@ -1,12 +1,23 @@
 <Window x:Class="HandBrakeCompletedManager.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:HandBrakeCompletedManager.App"
         Title="HandBrake Completed Manager"
         Height="900"
         Width="1400"
         MinHeight="700"
         MinWidth="1024"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <local:OneBasedIndexConverter x:Key="OneBasedIndexConverter" />
+        <local:OutputPercentageBackgroundConverter x:Key="OutputPercentageBackgroundConverter" />
+        <Style x:Key="OutputPercentageCellStyle"
+               TargetType="DataGridCell"
+               BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Setter Property="Background"
+                    Value="{Binding Record.OutputPercentage, Converter={StaticResource OutputPercentageBackgroundConverter}}" />
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -355,18 +366,30 @@
                                   AutoGenerateColumns="False"
                                   IsReadOnly="True"
                                   CanUserAddRows="False"
+                                  AlternationCount="2147483647"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
                                   PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="#" Width="56" CanUserSort="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource InkMutedBrush}"
+                                                       Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type DataGridRow}}, Path=AlternationIndex, Converter={StaticResource OneBasedIndexConverter}}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
                                 <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Status" Width="205" />
                                 <DataGridTextColumn Header="SOURCE" Binding="{Binding SourceFilename}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="170" />
                                 <DataGridTextColumn Header="ORIGINAL" Binding="{Binding SourceSize}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SourceSize" Width="110" />
                                 <DataGridTextColumn Header="CONVERTED" Binding="{Binding DestinationSize}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.DestinationSize" Width="115" />
-                                <DataGridTextColumn Header="OUTPUT SIZE" Binding="{Binding OutputPercentage}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.OutputPercentage" Width="105" />
+                                <DataGridTextColumn Header="OUTPUT SIZE" Binding="{Binding OutputPercentage}" CellStyle="{StaticResource OutputPercentageCellStyle}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.OutputPercentage" Width="105" />
                                 <DataGridTextColumn Header="SAVED" Binding="{Binding SpaceSaved}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.SpaceSavedBytes" Width="110" />
                                 <DataGridTextColumn Header="CONVERTED FILE" Binding="{Binding DestinationFilename}" ElementStyle="{StaticResource CenteredDataGridTextStyle}" SortMemberPath="Record.DestinationFilename" Width="*" MinWidth="170" />
                             </DataGrid.Columns>

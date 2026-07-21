@@ -18,7 +18,9 @@ The visible-result count updates whenever search text, a quick filter, or histor
 
 ## Sorting and details
 
-Select any column heading to sort the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
+The first column numbers the currently displayed rows from 1 in their active filtered and sorted order. Select any sortable column heading to reorder the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
+
+All cells use horizontal and vertical padding to keep text away from row and column edges. The **Output Size** percentage is pale orange when the converted file exceeds 80% of the original size and pale red when it reaches 90% or more.
 
 Selecting one row displays its completion time, file-action status, full source and output paths, size comparison, exit code, and current file availability. Automatic refresh first compares the latest database result with the displayed rows. It does not rebuild an unchanged list, and selected records remain selected when changed data is applied and they still match the active filter.
 
@@ -67,6 +69,6 @@ When more than one row is selected, the primary actions change to **Replace sele
 
 Every bulk action opens a scrollable confirmation window listing every selected source and output or target path. Initially blocked items remain visible and are skipped. Eligible items run one at a time, never in parallel. **Stop after current** allows the active verified item to reach a safe boundary before the remaining items are skipped.
 
-Bulk source replacement uses the same direct move/copy behavior as the single-record workflow. The user chooses whether outputs are consumed or kept, and cross-selection conflicts resolving to the same final path are blocked before confirmation. After the one bulk confirmation, each item closes its progress step automatically and processing advances until the selection is complete, a failure is recorded, or **Stop after current** is requested.
+Bulk source replacement uses the same direct move/copy behavior as the single-record workflow. The user chooses whether outputs are consumed or kept, and cross-selection conflicts resolving to the same final path are blocked before confirmation. After the one bulk confirmation, one persistent progress window lists every eligible item. Each item has its own byte-progress bar and status, while an overall item-based bar and `processed/total` counter advance after each attempt. **Stop after current** finishes the active item safely; **Cancel current & stop** is enabled during a cancellable copy.
 
 Bulk output recycling revalidates each output immediately before invoking the Windows Recycle Bin and never falls back to permanent deletion. Bulk history removal changes only SQLite records. After confirmation closes, bulk history removal opens a separate live progress window before processing begins; the window remains responsive, identifies the current item, and stays visible with the final removed, failed, and skipped totals. Each workflow ends with succeeded, failed, and skipped totals.

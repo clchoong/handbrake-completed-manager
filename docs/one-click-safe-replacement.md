@@ -27,3 +27,7 @@ The source is not removed until the complete output has reached a temporary path
 4. The completed action is recorded as **Source Replaced** or **Source Replaced, Output Kept**.
 
 The operation refuses the same physical source/output file and unrelated occupied replacement paths. A failed or cancelled transfer can be started again from the history row.
+
+## Bulk progress
+
+Bulk replacement uses one progress window for the entire confirmed selection. Every eligible file has an individual byte-based progress bar and current stage. The total bar is item-based: for five items it begins at `0/5` and advances to 20% and `1/5` after the first item finishes. Failed and cancelled attempts count as processed so the total reflects how much of the batch has been attempted, while their individual status remains clearly marked.

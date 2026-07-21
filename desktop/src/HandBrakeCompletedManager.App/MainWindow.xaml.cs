@@ -674,6 +674,12 @@ public partial class MainWindow : Window
 
     private void StopBulkButton_Click(object sender, RoutedEventArgs e)
     {
+        RequestBulkStop();
+    }
+
+    private void RequestBulkStop()
+    {
+        if (!_bulkOperationInProgress) return;
         _stopBulkAfterCurrent = true;
         StopBulkButton.IsEnabled = false;
         StopBulkButton.Content = "Stopping after current...";
@@ -934,26 +940,70 @@ public partial class MainWindow : Window
         var succeeded = 0;
         var failed = 0;
         var cancelled = 0;
+        CancellationTokenSource? activeItemCancellation = null;
+        var progressWindow = new BulkReplacementProgressWindow(
+            eligible.Select(row => row.SourceFilename).ToArray())
+        {
+            Owner = this
+        };
+        progressWindow.StopRequested += (_, _) => RequestBulkStop();
+        progressWindow.CancelCurrentRequested += (_, _) =>
+        {
+            RequestBulkStop();
+            activeItemCancellation?.Cancel();
+        };
+        progressWindow.Show();
+        progressWindow.Activate();
+        await progressWindow.WaitUntilRenderedAsync();
+        await Dispatcher.Yield(DispatcherPriority.ContextIdle);
         BeginBulkOperation();
         try
         {
-            foreach (var row in eligible)
+            for (var index = 0; index < eligible.Length; index++)
             {
+                var row = eligible[index];
                 StatusText.Text = $"Replacing {succeeded + failed + cancelled + 1:N0} of {eligible.Length:N0}: {row.SourceFilename}";
-                var progressWindow = new ReplacementProgressWindow(
-                    row.Record,
-                    keepOutput,
-                    _directReplacementService,
-                    closeWhenFinished: true)
+                progressWindow.StartItem(index);
+                using var itemCancellation = new CancellationTokenSource();
+                activeItemCancellation = itemCancellation;
+                var itemProgress = new Progress<DirectReplacementProgress>(
+                    progress => progressWindow.ReportItem(index, progress));
+                try
                 {
-                    Owner = this
-                };
-                progressWindow.ShowDialog();
-                if (progressWindow.Result is not null) succeeded++;
-                else if (progressWindow.WasCancelled) cancelled++;
-                else failed++;
+                    await _directReplacementService.ReplaceAsync(
+                        row.Record,
+                        keepOutput,
+                        itemProgress,
+                        itemCancellation.Token);
+                    succeeded++;
+                    progressWindow.CompleteItem(index, "Source replaced", succeeded: true, cancelled: false);
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled++;
+                    progressWindow.CompleteItem(index, "Cancelled — files were left at a safe boundary", succeeded: false, cancelled: true);
+                }
+                catch (Exception exception)
+                {
+                    failed++;
+                    progressWindow.CompleteItem(index, $"Failed — {exception.Message}", succeeded: false, cancelled: false);
+                    _ = _logger.LogAsync(
+                        DiagnosticLogLevel.Warning,
+                        "A selected source replacement failed; the bulk workflow continued.",
+                        exception);
+                }
+                finally
+                {
+                    activeItemCancellation = null;
+                }
 
-                if (_stopBulkAfterCurrent) break;
+                progressWindow.ReportOverall(succeeded + failed + cancelled);
+
+                if (_stopBulkAfterCurrent)
+                {
+                    progressWindow.MarkRemainingSkipped(index + 1);
+                    break;
+                }
             }
         }
         finally
@@ -963,8 +1013,9 @@ public partial class MainWindow : Window
         }
 
         var skipped = selectedRows.Count - succeeded - failed - cancelled;
-        StatusText.Text =
-            $"Bulk replacement: {succeeded:N0} replaced, {failed:N0} failed, {cancelled:N0} cancelled, {skipped:N0} skipped.";
+        var summary = $"{succeeded:N0} replaced, {failed:N0} failed, {cancelled:N0} cancelled, {skipped:N0} skipped.";
+        progressWindow.Complete(summary, failed > 0 || cancelled > 0);
+        StatusText.Text = $"Bulk replacement: {summary}";
     }
 
     private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
