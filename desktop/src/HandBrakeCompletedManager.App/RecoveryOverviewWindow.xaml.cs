@@ -9,6 +9,7 @@ public partial class RecoveryOverviewWindow : Window
     {
         ArgumentNullException.ThrowIfNull(items);
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         DataContext = items;
     }
 

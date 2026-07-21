@@ -1,5 +1,7 @@
 # Replacement safety preflight
 
+> Legacy workflow: this document describes verified replacement operations created by versions before 0.8.0. The normal 0.8.0 **Replace Source** action uses the direct move/copy workflow documented in [Direct source replacement](one-click-safe-replacement.md).
+
 Phase 2 begins with a replacement preflight. It calculates the intended paths, examines current file metadata, reports blocking conditions and warnings, and displays the plan before any temporary copy can start.
 
 ## Open the review

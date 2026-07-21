@@ -10,87 +10,102 @@ namespace HandBrakeCompletedManager.App;
 
 public partial class ReplacementProgressWindow : Window
 {
-    private readonly ReplacementPlan _plan;
-    private readonly SafeReplacementService _service;
+    private readonly CompletedEncode _record;
+    private readonly bool _keepOutput;
+    private readonly DirectSourceReplacementService _service;
+    private readonly CancellationTokenSource _cancellation = new();
     private bool _isRunning = true;
 
-    public ReplacementProgressWindow(ReplacementPlan plan, SafeReplacementService service)
+    public ReplacementProgressWindow(
+        CompletedEncode record,
+        bool keepOutput,
+        DirectSourceReplacementService service)
     {
         InitializeComponent();
-        _plan = plan ?? throw new ArgumentNullException(nameof(plan));
-        _service = service ?? throw new ArgumentNullException(nameof(service));
-        FileNameText.Text = Path.GetFileName(plan.CompletedEncode.SourcePath);
+        PopupWindowRendering.Stabilize(this);
+        _record = record;
+        _keepOutput = keepOutput;
+        _service = service;
+        FileNameText.Text = Path.GetFileName(record.SourcePath);
         ContentRendered += ReplacementProgressWindow_ContentRendered;
         Closing += ReplacementProgressWindow_Closing;
     }
 
-    public SafeReplacementResult? Result { get; private set; }
+    public DirectReplacementResult? Result { get; private set; }
     public Exception? Failure { get; private set; }
+    public bool WasCancelled { get; private set; }
 
     private async void ReplacementProgressWindow_ContentRendered(object? sender, EventArgs e)
     {
         ContentRendered -= ReplacementProgressWindow_ContentRendered;
         await Dispatcher.Yield(DispatcherPriority.ContextIdle);
-        var progress = new Progress<SafeReplacementProgress>(UpdateProgress);
+        var progress = new Progress<DirectReplacementProgress>(UpdateProgress);
         try
         {
-            Result = await _service.ReplaceAsync(_plan, progress);
+            Result = await _service.ReplaceAsync(_record, _keepOutput, progress, _cancellation.Token);
             OverallProgressBar.IsIndeterminate = false;
             OverallProgressBar.Value = 100;
             StageText.Text = "Replacement complete";
-            ProgressText.Text = "Verified converted file installed beside the original location";
+            ProgressText.Text = Result.OutputKept ? "The separate output was kept" : "The output was moved into the source library";
             PercentageText.Text = "100%";
-            OutcomeText.Text = PathsEqual(_plan.CompletedEncode.SourcePath, _plan.Paths.FinalPath)
-                ? "Completed safely. The converted file now occupies the original source path and a verified original backup remains available for recovery."
-                : "Completed safely. The original source is in the Windows Recycle Bin and a verified backup remains available for Undo.";
+            OutcomeText.Text = Result.OutputKept
+                ? "Source replaced. The original cannot be recovered, and the separate output was kept."
+                : "Source replaced. The original cannot be recovered, and no separate output remains.";
             OutcomeText.Foreground = MediaBrushes.DarkGreen;
+        }
+        catch (OperationCanceledException)
+        {
+            WasCancelled = true;
+            OverallProgressBar.IsIndeterminate = false;
+            StageText.Text = "Replacement cancelled";
+            ProgressText.Text = "The original source and output were not changed";
+            PercentageText.Text = string.Empty;
+            OutcomeText.Text = "You can close this window and try Replace Source again.";
         }
         catch (Exception exception)
         {
             Failure = exception;
             OverallProgressBar.IsIndeterminate = false;
-            StageText.Text = "Replacement stopped safely";
-            ProgressText.Text = "No further stages will run";
+            StageText.Text = "Replacement stopped";
+            ProgressText.Text = "No further steps will run";
             PercentageText.Text = string.Empty;
-            OutcomeText.Text = $"{exception.Message} Use Recovery to inspect or continue the recorded checkpoint.";
+            OutcomeText.Text = $"{exception.Message} Close this window and try again.";
             OutcomeText.Foreground = MediaBrushes.DarkRed;
         }
         finally
         {
             _isRunning = false;
+            CancelButton.IsEnabled = false;
             CloseButton.IsEnabled = true;
         }
     }
 
-    private void UpdateProgress(SafeReplacementProgress progress)
+    private void UpdateProgress(DirectReplacementProgress progress)
     {
-        var (start, span, stageLabel) = progress.Stage switch
+        StageText.Text = progress.Stage switch
         {
-            SafeReplacementStage.CopyingConvertedFile => (0d, 45d, "Copying converted file"),
-            SafeReplacementStage.BackingUpOriginalSource => (45d, 38d, "Protecting original source"),
-            SafeReplacementStage.VerifyingAllArtifacts => (84d, 3d, "Verifying files"),
-            SafeReplacementStage.PromotingConvertedFile => (88d, 4d, "Installing converted file"),
-            SafeReplacementStage.RecyclingOriginalSource => PathsEqual(_plan.CompletedEncode.SourcePath, _plan.Paths.FinalPath)
-                ? (93d, 4d, "Recording atomic source replacement")
-                : (93d, 4d, "Moving original to Recycle Bin"),
-            SafeReplacementStage.CompletingTransaction => (98d, 1d, "Finishing replacement"),
-            _ => (0d, 0d, "Replacing source")
+            DirectReplacementStage.Preparing => "Preparing replacement",
+            DirectReplacementStage.Transferring => "Transferring output",
+            DirectReplacementStage.Installing => "Replacing source",
+            DirectReplacementStage.DeletingOutput => "Removing separate output",
+            DirectReplacementStage.Completed => "Replacement complete",
+            _ => "Replacing source"
         };
-
-        StageText.Text = stageLabel;
         ProgressText.Text = progress.Message;
-        if (progress.Percentage is double stagePercentage)
+        CancelButton.IsEnabled = progress.CanCancel;
+        OverallProgressBar.IsIndeterminate = progress.TotalBytes <= 0;
+        if (!OverallProgressBar.IsIndeterminate)
         {
-            var overall = Math.Clamp(start + (stagePercentage / 100d * span), 0, 99);
-            OverallProgressBar.IsIndeterminate = false;
-            OverallProgressBar.Value = overall;
-            PercentageText.Text = $"{overall:0}%";
+            OverallProgressBar.Value = progress.Percentage;
+            PercentageText.Text = $"{progress.Percentage:0}%";
         }
-        else
-        {
-            OverallProgressBar.IsIndeterminate = true;
-            PercentageText.Text = string.Empty;
-        }
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        CancelButton.IsEnabled = false;
+        ProgressText.Text = "Cancelling after the current transfer operation...";
+        _cancellation.Cancel();
     }
 
     private void ReplacementProgressWindow_Closing(object? sender, CancelEventArgs e)
@@ -98,12 +113,9 @@ public partial class ReplacementProgressWindow : Window
         if (_isRunning)
         {
             e.Cancel = true;
-            OutcomeText.Text = "Replacement is still running. This window will become closable at the next safe completion or recovery point.";
+            OutcomeText.Text = "Use Cancel while a copy is in progress. The window can close after the operation reaches a safe boundary.";
         }
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
-
-    private static bool PathsEqual(string left, string right) =>
-        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 }

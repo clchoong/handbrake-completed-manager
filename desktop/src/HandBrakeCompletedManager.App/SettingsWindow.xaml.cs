@@ -16,6 +16,7 @@ public partial class SettingsWindow : Window
         string logDirectory)
     {
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         _fileActions = fileActions;
         _logDirectory = Path.GetFullPath(logDirectory);
         SavedSettings = settings.Normalize();

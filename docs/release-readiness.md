@@ -1,64 +1,46 @@
 # Release readiness
 
-Version 0.7.2 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
+Version 0.8.0 was validated as a self-contained Windows x64 open-source release candidate on 21 July 2026.
 
 ## Validation result
 
 - The complete Release solution build succeeded with zero warnings and zero errors.
-- All 224 automated tests passed: 95 core, 65 infrastructure, and 64 finalisation tests.
+- All 229 automated tests passed: 95 core, 70 infrastructure, and 64 finalisation tests.
+- Direct replacement tests cover default output consumption, output retention, same-extension atomic replacement, copy cancellation, cleanup, retry, and persisted statuses.
+- The version 0.8.0 database upgrade adds file-action outcomes without removing existing completed history or legacy recovery records.
+- The Status column reports **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept** rather than repeating HandBrake completion state.
+- Single and bulk replacement expose both output-retention choices and refuse duplicate or unrelated occupied targets.
+- Same-volume default replacement uses moves; cross-volume and keep-output transfers copy once with byte progress and cancellation.
+- The source is not removed until a complete output is positioned in its source directory. Whole-file checksums and original-backup creation are not part of the direct workflow.
+- All nine custom secondary windows use WPF software rendering and a forced first-frame layout refresh to address transparent popup content.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
 - Package verification removed all generated history, settings, logs, and temporary media before distribution.
-- Archive inspection found only the desktop executable, receiver executable, portable marker, and portable guide.
-- The WPF build embeds the high-contrast original application icon in the executable and uses it consistently in the dashboard and notification area.
-- A real two-launch process check confirmed that the secondary process exits while the primary process remains and receives the activation signal.
-- The history grid hands mouse-wheel input back to the page when its own scroll range reaches a boundary.
-- Package verification requires the project MIT licence, direct dependency notices, and .NET distribution third-party notices.
-- The archive contains no generated history, settings, logs, private developer metadata, or local paths outside the portable guide's generic examples.
-- Output-recycling tests cover captured-file verification, unfinished-replacement refusal, Recycle Bin failure, source retention, and retained history.
-- Replacement-state tests verify the terminal **Replaced** and **Restored** indicators from durable finalisation checkpoints.
-- Extended row selection supports Ctrl-click, Shift-click, Ctrl+A, selecting all filtered rows, and clearing the selection.
-- Bulk source replacement preflights every record and blocks selected records that resolve to the same final path before confirmation.
-- Bulk source replacement, output recycling, and history removal execute sequentially, allow stopping between records, and report succeeded, failed, and skipped totals.
-- Activity-log parsing tests cover successful, paused, failed, malformed, and fallback-timestamp cases.
-- Activity-log integration tests verify missing-output refusal, completed-history deduplication, and non-destructive import.
-- Real-log read-only validation parsed all 94 successful completion logs in the local sample set and correctly separated existing from missing outputs.
-- Tray Exit no longer synchronously waits for logging on the UI thread, and history removal performs SQLite work away from the interface thread.
-- The normal source-replacement path uses one exact-path warning followed by a dedicated overall progress window; detailed transaction controls remain available through Recovery.
-- Same-extension replacement atomically installs the verified converted copy at the original source path while retaining the recorded HandBrake output and verified original backup.
-- Replacement and bulk-history progress windows wait for their first completed render before work starts, preventing a transparent or apparently frozen initial state.
-- Bulk history removal shows current-item and overall progress in a separate responsive window until final totals are available.
-- Settings content scrolls independently of its footer, keeping diagnostic-log controls reachable at smaller sizes and display scaling.
-- The About window reports the packaged assembly version, MIT licence, independence notice, platform, runtime, architecture, storage boundary, and project links.
-- Packaged executable metadata reports product version `0.7.2`, company `clchoong`, and the expected copyright.
+- Archive inspection found no private developer metadata or local development paths.
+- Packaged executable metadata reports product version `0.8.0` and company `clchoong`.
 
-The validated archive is `HandBrake-Completed-Manager-0.7.2-win-x64.zip`. Its size is 116,216,355 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.8.0-win-x64.zip`. Its size is 116,231,438 bytes and its SHA-256 checksum is:
 
 ```text
-5F03F65025CD994DB35271895673AC2C4411502E2DC733DB3846521F3E59552B
+6688308C0102AC9948D1BF8A8A9E2BA9B3001527F8E1F1730AAFB9158E24FEA6
 ```
-
-Generated packages remain outside source control. Rebuild and re-run the package verifier before publishing a later commit or version; a newly created archive can have a different checksum.
 
 ## Supported release boundary
 
 - Windows x64 is the validated architecture.
-- The application target permits Windows 10 version 1809/build 17763 or later. Supported deployment is limited to Windows editions still supported by Microsoft and Windows 11.
-- The package is self-contained and does not require a separate .NET installation or administrator access.
+- The application supports Windows 10 version 1809/build 17763 or later and Windows 11.
+- The package is self-contained and does not require administrator access or a separate .NET installation.
 - HandBrake completion-action setup remains manual so the application does not alter HandBrake preferences.
-- Files retired by replacement or undo use forced Windows Recycle Bin semantics. There is no permanent-delete fallback.
-- A separately confirmed output-recycling action verifies the captured file and refuses unfinished replacement dependencies before invoking the same recoverable Windows behavior.
+- Direct source replacement is intentionally irreversible and displays that warning before either option can run.
+- Separate **Recycle Output** still uses the Windows Recycle Bin and **Remove History** still changes only SQLite.
+- Legacy Recovery remains available for unfinished verified operations created by earlier versions.
 - The package is not code-signed, so Windows may display a reputation warning.
 
 ## Reproduce the checks
 
-From the repository root with the .NET 10 SDK installed:
-
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.7.2
+.\scripts\publish-portable.ps1 -Version 0.8.0
 ```
-
-The publishing script performs package-level smoke tests and prints the generated archive checksum. See [Portable release](portable-release.md) for package layout and storage behavior.

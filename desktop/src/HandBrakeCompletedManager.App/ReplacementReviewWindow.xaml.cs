@@ -98,6 +98,7 @@ public partial class ReplacementReviewWindow : Window
         _finalFileRecycleService = finalFileRecycleService;
         _undoCompletionService = undoCompletionService;
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         ApplyPlan(plan);
         PrepareCopyButton.IsEnabled = false;
         CopyStatusText.Text = "Checking previous operation state...";

@@ -5,7 +5,7 @@ The desktop interface uses a shared high-end visual system designed for clear da
 ## Design direction
 
 - A deep navy application header establishes a stable workspace and keeps global actions predictable.
-- Warm orange is reserved for the primary action, especially **Review & replace** and **Replace source safely**.
+- Warm orange is reserved for the primary action, especially **Replace Source**.
 - Summary metrics are presented as individual cards with distinct color markers instead of one undifferentiated panel.
 - Neutral surfaces, restrained borders, rounded geometry, and Segoe UI typography provide hierarchy without decorative clutter.
 - Success, warning, and destructive actions use consistent green, amber, and red semantic treatments.
@@ -17,19 +17,20 @@ The desktop interface uses a shared high-end visual system designed for clear da
 
 The normal replacement experience is intentionally simple:
 
-1. One warning identifies the exact source and HandBrake output paths and summarizes what changes.
-2. **Replace source** starts the complete verified workflow.
-3. One overall progress bar maps the internal copy, backup, verification, promotion, recycling, and completion stages into familiar file-copy progress.
-4. Success or a recoverable stop remains visible until the user closes the progress window.
-5. The detailed replacement review and individual transaction controls appear only through Recovery when an interrupted checkpoint needs attention.
+1. One warning identifies the exact paths and states that the original source cannot be recovered.
+2. **Replace Source** is the default; **Replace Source and Keep Output** is secondary.
+3. Copy-required operations show transferred bytes, percentage, and a Cancel action until the destructive boundary.
+4. Success, cancellation, or failure remains visible until the user closes the window and can retry.
 
-This keeps the normal path simple without removing the checkpoint-specific controls needed after interruption.
+This keeps the normal path aligned with familiar cut-and-paste behavior. Legacy Recovery remains available only for unfinished operations created by earlier versions.
 
 ## Shared design system
 
 `Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, settings, progress, and About windows consume the same resources.
 
-The source-replacement column uses plain-language durable states. **✓ Replaced** is shown only for the terminal `Completed` checkpoint, while incomplete and recovery-required work remains visibly distinct.
+The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**.
+
+All secondary windows opt into WPF software rendering and invalidate their first rendered frame. This avoids transparent or blank popup surfaces seen with some Windows graphics-driver and compositor combinations.
 
 The interface preserves native window chrome, keyboard navigation, default/cancel behavior, readable focus indication, and Windows accessibility automation names for key search, filter, connection, and file-path controls.
 

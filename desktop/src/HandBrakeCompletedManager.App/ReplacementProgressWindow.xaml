@@ -49,12 +49,19 @@
         </StackPanel>
 
         <Border Grid.Row="2" Padding="26,13" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
-            <Button x:Name="CloseButton"
-                    MinWidth="100"
-                    HorizontalAlignment="Right"
-                    IsEnabled="False"
-                    Click="CloseButton_Click"
-                    Content="Close" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CancelButton"
+                        MinWidth="100"
+                        Margin="0,0,8,0"
+                        IsEnabled="False"
+                        Click="CancelButton_Click"
+                        Content="Cancel" />
+                <Button x:Name="CloseButton"
+                        MinWidth="100"
+                        IsEnabled="False"
+                        Click="CloseButton_Click"
+                        Content="Close" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

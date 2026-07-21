@@ -20,6 +20,7 @@ public sealed class OutputRecycleServiceTests
         Assert.False(File.Exists(fixture.OutputPath));
         Assert.True(File.Exists(fixture.SourcePath));
         Assert.False(persisted.DestinationExists);
+        Assert.Equal("Output Deleted", persisted.FileActionStatus);
         Assert.Equal(1, recycler.CallCount);
     }
 

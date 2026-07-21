@@ -12,7 +12,8 @@ public sealed class CompletedEncodeRepository(string databasePath)
         "HandBrakeCompletedManager.Infrastructure.Migrations.002_replacement_operations.sql",
         "HandBrakeCompletedManager.Infrastructure.Migrations.003_replacement_retry_index.sql",
         "HandBrakeCompletedManager.Infrastructure.Migrations.004_original_backups.sql",
-        "HandBrakeCompletedManager.Infrastructure.Migrations.005_finalization_transactions.sql"
+        "HandBrakeCompletedManager.Infrastructure.Migrations.005_finalization_transactions.sql",
+        "HandBrakeCompletedManager.Infrastructure.Migrations.006_completed_encode_actions.sql"
     ];
 
     private readonly string _databasePath = Path.GetFullPath(databasePath);
@@ -65,10 +66,26 @@ public sealed class CompletedEncodeRepository(string databasePath)
         CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM completed_encodes WHERE id = $id;";
-        command.Parameters.AddWithValue("$id", recordId.ToString("D"));
-        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var actionCommand = connection.CreateCommand())
+        {
+            actionCommand.Transaction = (SqliteTransaction)transaction;
+            actionCommand.CommandText = "DELETE FROM completed_encode_actions WHERE completed_encode_id = $id;";
+            actionCommand.Parameters.AddWithValue("$id", recordId.ToString("D"));
+            await actionCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        int removed;
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = (SqliteTransaction)transaction;
+            command.CommandText = "DELETE FROM completed_encodes WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", recordId.ToString("D"));
+            removed = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return removed == 1;
     }
 
     public async Task<bool> TryMarkDestinationRecycledAsync(
@@ -96,7 +113,41 @@ public sealed class CompletedEncodeRepository(string databasePath)
         command.Parameters.AddWithValue("$destinationSize", expectedDestinationSize);
         command.Parameters.AddWithValue("$destinationLastWriteUtc", FormatDate(expectedDestinationLastWriteUtc));
         command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
-        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        var updated = await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        if (updated)
+        {
+            await UpsertFileActionAsync(recordId, null, "Output Deleted", null, updatedUtc, cancellationToken);
+        }
+
+        return updated;
+    }
+
+    public async Task UpsertFileActionAsync(
+        Guid recordId,
+        string? replacementPath,
+        string actionStatus,
+        bool? outputKept,
+        DateTimeOffset updatedUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO completed_encode_actions (
+                completed_encode_id, replacement_path, action_status, output_kept, date_updated_utc)
+            VALUES ($id, $replacementPath, $actionStatus, $outputKept, $updatedUtc)
+            ON CONFLICT(completed_encode_id) DO UPDATE SET
+                replacement_path = excluded.replacement_path,
+                action_status = excluded.action_status,
+                output_kept = excluded.output_kept,
+                date_updated_utc = excluded.date_updated_utc;
+            """;
+        command.Parameters.AddWithValue("$id", recordId.ToString("D"));
+        command.Parameters.AddWithValue("$replacementPath", replacementPath is null ? DBNull.Value : Path.GetFullPath(replacementPath));
+        command.Parameters.AddWithValue("$actionStatus", actionStatus);
+        command.Parameters.AddWithValue("$outputKept", outputKept is null ? DBNull.Value : outputKept.Value);
+        command.Parameters.AddWithValue("$updatedUtc", FormatDate(updatedUtc));
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<CompletedEncode>> GetAllAsync(
@@ -106,14 +157,16 @@ public sealed class CompletedEncodeRepository(string databasePath)
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT id, event_fingerprint, completed_at_utc,
+            SELECT e.id, e.event_fingerprint, e.completed_at_utc,
                    source_path, source_filename, source_extension, source_size, source_exists,
                    destination_path, destination_filename, destination_extension,
                    destination_size, destination_exists, destination_last_write_utc,
                    output_percentage, space_saved_percentage, space_saved_bytes,
-                   exit_code, current_status, date_created_utc, date_updated_utc
-            FROM completed_encodes
-            ORDER BY completed_at_utc DESC;
+                   exit_code, current_status, date_created_utc, e.date_updated_utc,
+                   a.replacement_path, a.action_status, a.output_kept
+            FROM completed_encodes e
+            LEFT JOIN completed_encode_actions a ON a.completed_encode_id = e.id
+            ORDER BY e.completed_at_utc DESC;
             """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -192,7 +245,10 @@ public sealed class CompletedEncodeRepository(string databasePath)
         reader.GetInt32(17),
         reader.GetString(18),
         ParseDate(reader.GetString(19)),
-        ParseDate(reader.GetString(20)));
+        ParseDate(reader.GetString(20)),
+        reader.IsDBNull(21) ? null : reader.GetString(21),
+        reader.IsDBNull(22) ? null : reader.GetString(22),
+        reader.IsDBNull(23) ? null : reader.GetBoolean(23));
 
     private static string ReadMigration(string migrationResourceName)
     {

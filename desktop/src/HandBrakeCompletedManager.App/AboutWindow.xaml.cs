@@ -13,6 +13,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         var assembly = Assembly.GetExecutingAssembly();
         var informationalVersion = assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?

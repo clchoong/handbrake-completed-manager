@@ -14,6 +14,7 @@ public partial class FileActionConfirmationWindow : Window
         string actionLabel)
     {
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         Title = title;
         HeadingText.Text = heading;
         DescriptionText.Text = description;

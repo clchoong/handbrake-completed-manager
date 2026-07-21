@@ -21,5 +21,8 @@ public sealed record CompletedEncode(
     int ExitCode,
     string CurrentStatus,
     DateTimeOffset DateCreatedUtc,
-    DateTimeOffset DateUpdatedUtc);
+    DateTimeOffset DateUpdatedUtc,
+    string? ReplacementPath = null,
+    string? FileActionStatus = null,
+    bool? ReplacementKeptOutput = null);
 

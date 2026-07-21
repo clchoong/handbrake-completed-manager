@@ -12,6 +12,7 @@ public partial class BulkOperationProgressWindow : Window
     public BulkOperationProgressWindow(string title, string heading, string subtitle)
     {
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         Title = title;
         HeadingText.Text = heading;
         SubtitleText.Text = subtitle;

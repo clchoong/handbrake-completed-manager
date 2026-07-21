@@ -20,11 +20,11 @@ The visible-result count updates whenever search text, a quick filter, or histor
 
 Select any column heading to sort the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
 
-Selecting one row displays its completion time, status, source-replacement state, full source and output paths, size comparison, exit code, and captured file-availability state. Selected records remain selected during automatic history refresh when they still match the active filter.
+Selecting one row displays its completion time, file-action status, full source and output paths, size comparison, exit code, and current file availability. Selected records remain selected during automatic history refresh when they still match the active filter.
 
 Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
 
-The **Source replacement** column reports **Not replaced**, **In progress**, **Needs attention**, **✓ Replaced**, or **Restored** from the latest durable replacement operation and finalisation checkpoint. The check mark appears only after forward replacement has completed atomically.
+The **Status** column is reserved for file-management outcomes rather than repeating HandBrake's completed state. It displays **Output Deleted**, **Source Replaced**, or **Source Replaced, Output Kept**. Untouched records leave this field blank.
 
 ## Available actions
 
@@ -67,6 +67,6 @@ When more than one row is selected, the primary actions change to **Replace sele
 
 Every bulk action opens a scrollable confirmation window listing every selected source and output or target path. Initially blocked items remain visible and are skipped. Eligible items run one at a time, never in parallel. **Stop after current** allows the active verified item to reach a safe boundary before the remaining items are skipped.
 
-Bulk source replacement uses the same preflight, SHA-256 verification, original backup, atomic promotion, Windows Recycle Bin, durable journal, and recovery behavior as the single-record workflow. Cross-selection conflicts that resolve to the same final path are blocked before confirmation. A failure is recorded for that item and does not silently prevent review of the remaining results.
+Bulk source replacement uses the same direct move/copy behavior as the single-record workflow. The user chooses whether outputs are consumed or kept, and cross-selection conflicts resolving to the same final path are blocked before confirmation.
 
 Bulk output recycling revalidates each output immediately before invoking the Windows Recycle Bin and never falls back to permanent deletion. Bulk history removal changes only SQLite records. After confirmation closes, bulk history removal opens a separate live progress window before processing begins; the window remains responsive, identifies the current item, and stays visible with the final removed, failed, and skipped totals. Each workflow ends with succeeded, failed, and skipped totals.

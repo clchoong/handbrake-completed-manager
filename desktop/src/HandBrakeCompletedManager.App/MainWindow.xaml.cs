@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly SourceRecycleService _sourceRecycleService;
     private readonly FinalizationCompletionService _finalizationCompletionService;
     private readonly SafeReplacementService _safeReplacementService;
+    private readonly DirectSourceReplacementService _directReplacementService;
     private readonly UndoPreparationService _undoPreparationService;
     private readonly SourceRestorationService _sourceRestorationService;
     private readonly FinalFileRecycleService _finalFileRecycleService;
@@ -100,6 +101,7 @@ public partial class MainWindow : Window
             _finalizationPromotionService,
             _sourceRecycleService,
             _finalizationCompletionService);
+        _directReplacementService = new DirectSourceReplacementService(_repository);
         _undoPreparationService = new UndoPreparationService(
             _replacementOperationRepository,
             _finalizationTransactionRepository);
@@ -614,14 +616,15 @@ public partial class MainWindow : Window
         var hasSelection = selectedRows.Count > 0;
         var hasSingleSelection = row is not null;
 
-        PlayDestinationButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
-        PlaySourceButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
-        RevealDestinationButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
-        RevealSourceButton.IsEnabled = hasSingleSelection && !_bulkOperationInProgress;
-        ReviewReplacementButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
+        PlayDestinationButton.IsEnabled = hasSingleSelection && row!.OutputAvailable && !_bulkOperationInProgress;
+        PlaySourceButton.IsEnabled = hasSingleSelection && row!.SourceAvailable && !_bulkOperationInProgress;
+        RevealDestinationButton.IsEnabled = hasSingleSelection && row!.OutputAvailable && !_bulkOperationInProgress;
+        RevealSourceButton.IsEnabled = hasSingleSelection && row!.SourceAvailable && !_bulkOperationInProgress;
+        ReviewReplacementButton.IsEnabled =
+            hasSelection && selectedRows.Any(item => item.CanReplaceSource) && !_bulkOperationInProgress;
         RecycleOutputButton.IsEnabled =
             hasSelection &&
-            selectedRows.Any(item => item.Record.DestinationExists) &&
+            selectedRows.Any(item => item.CanRecycleOutput) &&
             !_bulkOperationInProgress;
         RemoveHistoryButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
         ClearSelectionButton.IsEnabled = hasSelection && !_bulkOperationInProgress;
@@ -773,15 +776,15 @@ public partial class MainWindow : Window
         }
 
         DetailsCompletedText.Text = row.Completed;
-        DetailsStatusText.Text = $"{row.Status}  |  {row.SourceReplacement}";
+        DetailsStatusText.Text = string.IsNullOrWhiteSpace(row.Status) ? "No file action" : row.Status;
         DetailsSourcePathTextBox.Text = row.SourcePath;
         DetailsDestinationPathTextBox.Text = row.DestinationPath;
         DetailsMetricsText.Text =
             $"Original {row.SourceSize}  |  Converted {row.DestinationSize}  |  " +
             $"Output {row.OutputPercentage}  |  Saved {row.SpaceSaved}  |  " +
             $"Exit code {row.Record.ExitCode}  |  " +
-            $"Source {(row.Record.SourceExists ? "available" : "missing")}, " +
-            $"output {(row.Record.DestinationExists ? "available" : "missing")}";
+            $"source {(row.SourceAvailable ? "available" : "missing")}, " +
+            $"output {(row.OutputAvailable ? "available" : "missing")}";
         DetailsPanel.Visibility = Visibility.Visible;
     }
 
@@ -821,48 +824,18 @@ public partial class MainWindow : Window
 
         if (selectedRows.Count > 1)
         {
-            await RunBulkReplacementAsync(selectedRows);
+            await RunBulkDirectReplacementAsync(selectedRows);
             return;
         }
 
         var row = selectedRows[0];
         try
         {
-            var plan = _replacementPreflightService.Review(row.Record);
-            if (!plan.CanProceed)
-            {
-                var reason = plan.Issues
-                    .FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Blocking)?
-                    .Message ?? "The replacement safety checks did not pass.";
-                StatusText.Text = $"Source replacement cannot start: {reason}";
-                System.Windows.MessageBox.Show(
-                    this,
-                    $"The source cannot be replaced yet.\n\n{reason}\n\nUse Recovery when an earlier replacement needs attention.",
-                    "Replacement blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            var warning = plan.Issues
-                .FirstOrDefault(issue => issue.Severity == ReplacementIssueSeverity.Warning)?
-                .Message;
-            var replacesSourceInPlace = PathsEqual(row.SourcePath, plan.Paths.FinalPath);
-            var replacementSafety = replacesSourceInPlace
-                ? "After verification, Windows atomically replaces the original source path. A verified original backup is retained for recovery, and the existing HandBrake output is kept."
-                : "Only after verification, the original source moves to the Windows Recycle Bin. A verified backup is retained for Undo, and the existing HandBrake output is kept.";
-            var safetyText =
-                $"The converted file will be copied and verified at:\n{plan.Paths.FinalPath}\n\n" +
-                replacementSafety +
-                (string.IsNullOrWhiteSpace(warning) ? string.Empty : $"\n\nNote: {warning}");
-            var confirmation = new FileActionConfirmationWindow(
-                "Replace source",
-                "Replace the original source?",
-                "Check the two files below, then choose Replace to start. Progress will remain visible throughout the operation.",
-                row.SourcePath,
-                row.DestinationPath,
-                safetyText,
-                "Replace source")
+            var replacementPath = ReplacementPlanner.BuildPaths(row.Record).FinalPath;
+            var confirmation = new DirectReplacementConfirmationWindow(
+                row.Record.SourcePath,
+                row.Record.DestinationPath,
+                replacementPath)
             {
                 Owner = this
             };
@@ -873,29 +846,33 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var progressWindow = new ReplacementProgressWindow(plan, _safeReplacementService)
+            var keepOutput = confirmation.Choice == DirectReplacementChoice.ReplaceSourceAndKeepOutput;
+            var progressWindow = new ReplacementProgressWindow(row.Record, keepOutput, _directReplacementService)
             {
                 Owner = this
             };
             progressWindow.ShowDialog();
             await LoadHistoryAsync();
-            await RefreshRecoverySummaryAsync();
 
             if (progressWindow.Result is not null)
             {
-                StatusText.Text = PathsEqual(row.SourcePath, plan.Paths.FinalPath)
-                    ? "Source replacement completed. The converted file now occupies the original source path; a verified original backup was retained."
-                    : "Source replacement completed. The converted file is beside the original location and the original is in the Windows Recycle Bin.";
+                StatusText.Text = progressWindow.Result.OutputKept
+                    ? "Source replaced permanently. The separate output was kept."
+                    : "Source replaced permanently. The output was moved, so no separate output remains.";
                 _ = _logger.LogAsync(
                     DiagnosticLogLevel.Information,
-                    "The simplified source replacement workflow completed atomically.");
+                    "The direct source replacement workflow completed.");
+            }
+            else if (progressWindow.WasCancelled)
+            {
+                StatusText.Text = "Source replacement cancelled. You can try again.";
             }
             else if (progressWindow.Failure is not null)
             {
-                StatusText.Text = $"Source replacement stopped safely: {progressWindow.Failure.Message}";
+                StatusText.Text = $"Source replacement stopped: {progressWindow.Failure.Message} You can try again.";
                 _ = _logger.LogAsync(
                     DiagnosticLogLevel.Warning,
-                    "The simplified source replacement workflow stopped at a recoverable checkpoint.",
+                    "The direct source replacement workflow stopped.",
                     progressWindow.Failure);
             }
         }
@@ -904,9 +881,86 @@ public partial class MainWindow : Window
             StatusText.Text = $"Unable to replace the source: {exception.Message}";
             _ = _logger.LogAsync(
                 DiagnosticLogLevel.Error,
-                "The simplified source replacement workflow could not start.",
+                "The direct source replacement workflow could not start.",
                 exception);
         }
+    }
+
+    private async Task RunBulkDirectReplacementAsync(IReadOnlyList<HistoryRow> selectedRows)
+    {
+        var paths = selectedRows.ToDictionary(
+            row => row.Id,
+            row => ReplacementPlanner.BuildPaths(row.Record).FinalPath);
+        var duplicatePaths = paths.Values
+            .GroupBy(Path.GetFullPath, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var items = selectedRows.Select(row =>
+        {
+            var target = paths[row.Id];
+            var canProceed = row.CanReplaceSource && !duplicatePaths.Contains(Path.GetFullPath(target));
+            return new BulkConfirmationItem(
+                row.Record.SourcePath,
+                target,
+                canProceed
+                    ? "Ready — original cannot be recovered"
+                    : row.CanReplaceSource
+                        ? "Blocked — duplicate replacement target"
+                        : "Blocked — output is missing",
+                canProceed);
+        }).ToArray();
+        var confirmation = new BulkConfirmationWindow(
+            "Replace selected sources",
+            "Permanently replace selected source files?",
+            "No recovery backups or checksums will be created. Replace Sources moves each output into its source library and removes the separate output.",
+            $"Replace {items.Count(item => item.CanProceed):N0} source(s)",
+            items,
+            "Replace Sources and Keep Outputs")
+        {
+            Owner = this
+        };
+
+        if (confirmation.ShowDialog() != true)
+        {
+            StatusText.Text = "Bulk source replacement cancelled.";
+            return;
+        }
+
+        var keepOutput = confirmation.SecondaryActionSelected;
+        var eligible = selectedRows.Where(row =>
+            row.CanReplaceSource &&
+            !duplicatePaths.Contains(Path.GetFullPath(paths[row.Id]))).ToArray();
+        var succeeded = 0;
+        var failed = 0;
+        var cancelled = 0;
+        BeginBulkOperation();
+        try
+        {
+            foreach (var row in eligible)
+            {
+                StatusText.Text = $"Replacing {succeeded + failed + cancelled + 1:N0} of {eligible.Length:N0}: {row.SourceFilename}";
+                var progressWindow = new ReplacementProgressWindow(row.Record, keepOutput, _directReplacementService)
+                {
+                    Owner = this
+                };
+                progressWindow.ShowDialog();
+                if (progressWindow.Result is not null) succeeded++;
+                else if (progressWindow.WasCancelled) cancelled++;
+                else failed++;
+
+                if (_stopBulkAfterCurrent) break;
+            }
+        }
+        finally
+        {
+            EndBulkOperation();
+            await LoadHistoryAsync();
+        }
+
+        var skipped = selectedRows.Count - succeeded - failed - cancelled;
+        StatusText.Text =
+            $"Bulk replacement: {succeeded:N0} replaced, {failed:N0} failed, {cancelled:N0} cancelled, {skipped:N0} skipped.";
     }
 
     private async void ReviewReplacementButton_Click(object sender, RoutedEventArgs e)
@@ -1272,12 +1326,12 @@ public partial class MainWindow : Window
 
     private async Task RunBulkOutputRecycleAsync(IReadOnlyList<HistoryRow> selectedRows)
     {
-        var eligible = selectedRows.Where(row => row.Record.DestinationExists).ToArray();
+        var eligible = selectedRows.Where(row => row.CanRecycleOutput).ToArray();
         var confirmationItems = selectedRows.Select(row => new BulkConfirmationItem(
             row.SourcePath,
             row.DestinationPath,
-            row.Record.DestinationExists ? "Ready" : "Blocked — output is missing",
-            row.Record.DestinationExists)).ToArray();
+            row.CanRecycleOutput ? "Ready" : "Blocked — output is missing or is now the replacement source",
+            row.CanRecycleOutput)).ToArray();
         var confirmation = new BulkConfirmationWindow(
             "Confirm bulk output recycling",
             "Recycle selected output files",
@@ -1678,7 +1732,6 @@ public sealed record HistoryRow(
     CompletedEncode Record,
     string Completed,
     string Status,
-    string SourceReplacement,
     string SourceFilename,
     string SourceSize,
     string DestinationSize,
@@ -1687,31 +1740,49 @@ public sealed record HistoryRow(
     string DestinationFilename)
 {
     public Guid Id => Record.Id;
-    public string SourcePath => Record.SourcePath;
+    public string SourcePath => Record.ReplacementPath ?? Record.SourcePath;
     public string DestinationPath => Record.DestinationPath;
+    public bool SourceAvailable => Record.ReplacementPath is not null || Record.SourceExists;
+    public bool OutputAvailable => Record.FileActionStatus switch
+    {
+        "Source Replaced" or "Output Deleted" => false,
+        _ => Record.DestinationExists
+    };
+    public bool CanRecycleOutput =>
+        OutputAvailable &&
+        (Record.ReplacementPath is null || !PathsEqual(Record.ReplacementPath, Record.DestinationPath));
+    public bool CanReplaceSource => OutputAvailable;
 
     public static HistoryRow From(
         CompletedEncode item,
         SourceReplacementState replacementState = SourceReplacementState.NotReplaced) => new(
         item,
         item.CompletedAtUtc.ToLocalTime().ToString("g"),
-        item.CurrentStatus,
-        FormatReplacementState(replacementState),
-        item.SourceFilename,
+        FormatActionStatus(item, replacementState),
+        item.ReplacementPath is null ? item.SourceFilename : Path.GetFileName(item.ReplacementPath),
         FormatNullableBytes(item.SourceSize),
         FormatNullableBytes(item.DestinationSize),
         item.OutputPercentage is null ? "-" : $"{item.OutputPercentage:0.##}%",
         FormatNullableBytes(item.SpaceSavedBytes),
         item.DestinationFilename);
 
-    private static string FormatReplacementState(SourceReplacementState state) => state switch
+    private static string FormatActionStatus(CompletedEncode item, SourceReplacementState state)
     {
-        SourceReplacementState.Replaced => "✓ Replaced",
-        SourceReplacementState.Restored => "Restored",
-        SourceReplacementState.InProgress => "In progress",
-        SourceReplacementState.NeedsAttention => "Needs attention",
-        _ => "Not replaced"
-    };
+        if (!string.IsNullOrWhiteSpace(item.FileActionStatus)) return item.FileActionStatus;
+        return state switch
+        {
+            SourceReplacementState.Replaced => item.DestinationExists
+                ? "Source Replaced, Output Kept"
+                : "Source Replaced",
+            SourceReplacementState.InProgress => "Replacement In Progress",
+            SourceReplacementState.NeedsAttention => "Replacement Needs Attention",
+            _ when !item.DestinationExists => "Output Deleted",
+            _ => string.Empty
+        };
+    }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
     private static string FormatNullableBytes(long? bytes)
     {

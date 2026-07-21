@@ -1,32 +1,29 @@
-# One-click safe source replacement
+# Direct source replacement
 
-For a normal completed encode, the user selects **Replace source**, reviews one warning containing the exact source and converted-output paths, and selects **Replace source** again to authorize the complete guarded replacement. A dedicated progress window then shows one familiar overall progress bar, the current stage, and the active file operation until completion or a recoverable stop.
+The normal **Replace Source** workflow is intentionally direct. It does not create a recovery backup, calculate SHA-256 checksums, or expose the legacy recovery transaction. The confirmation clearly states that the original source cannot be recovered after replacement.
 
-This removes the need to understand or approve each internal stage. The exact planned final and backup paths remain in the warning text, while detailed transaction controls are shown only when the user opens Recovery for an interrupted operation.
+## Choices
 
-## Automated sequence
+- **Replace Source** is the default. It moves the encoded output into the source library and leaves no separate output file.
+- **Replace Source and Keep Output** copies the encoded output into the source library and retains the original HandBrake output.
 
-The coordinator runs the existing safety services in this fixed order:
+The replacement filename keeps the original source base name and uses the encoded output extension. Matching source and output extensions replace the original path atomically.
 
-1. Re-run preflight against the current filesystem and refuse new work when recovery is blocking.
-2. Copy the HandBrake output to the deterministic temporary path and verify its size and SHA-256 digest.
-3. Copy the original source to the deterministic backup path and verify its size and SHA-256 digest.
-4. Revalidate every persisted state, path, size, timestamp, and digest.
-5. Persist the finalisation journal and atomically promote the temporary copy. For differing extensions, this creates an unoccupied final path; for matching extensions, Windows atomically replaces the verified original path.
-6. Revalidate the source, backup, and promoted final. When the final path differs, move the original source to the Windows Recycle Bin; an in-place replacement instead retains the verified original backup for recovery.
-7. Verify the final and backup again and atomically complete the database transaction.
+## Transfer behavior
 
-The original HandBrake output remains at its recorded output path. The promoted copy occupies the planned source-library filename, including the original path when both extensions match. The verified original backup remains available for recovery.
+When the output can be moved on the same volume, the default operation uses filesystem moves and is normally immediate. A cross-volume replacement must copy bytes because Windows cannot move a file across volumes. Keeping the output also requires a copy.
 
-## Failure and recovery behavior
+Copy operations show transferred bytes and percentage. **Cancel** is available during that copy. Cancellation removes the partial transfer, leaves the original source and output unchanged, and permits an immediate retry.
 
-Before the finalisation journal is created, a copy or verification failure retains the existing non-destructive recovery artifacts and operation state. Once the journal exists, each filesystem mutation is preceded by an intent checkpoint. A process interruption or Windows Recycle Bin failure therefore leaves a classifiable checkpoint for the Recovery view.
+The app performs only a file-length check after copying; it does not read the entire file again for checksum verification.
 
-The workflow never:
+## Destructive boundary
 
-- Overwrites an unrelated occupied final, temporary, or backup path.
-- Permanently deletes the original source.
-- Removes the source before the converted copy and original backup are independently verified.
-- Treats a missing file as a successful transition without the matching persisted intent.
+The source is not removed until the complete output has reached a temporary path in the source directory. After that point, the UI disables cancellation and completes the short installation boundary:
 
-If automatic execution stops, the progress window reports the error and directs the user to Recovery. The checkpoint-specific detailed control can continue the transaction without repeating already completed destructive work.
+1. For matching extensions, Windows atomically replaces the source path.
+2. For differing extensions, the original source is permanently deleted and the prepared file is renamed into its final source-library path.
+3. The default option removes the separate output if a cross-volume copy was necessary.
+4. The completed action is recorded as **Source Replaced** or **Source Replaced, Output Kept**.
+
+The operation refuses the same physical source/output file and unrelated occupied replacement paths. A failed or cancelled transfer can be started again from the history row.

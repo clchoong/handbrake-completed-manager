@@ -24,13 +24,13 @@ artifacts\portable\win-x64\
 │   ├── DOTNET-THIRD-PARTY-NOTICES.txt
 │   ├── portable.mode
 │   └── PORTABLE-README.txt
-└── HandBrake-Completed-Manager-0.7.2-win-x64.zip
+└── HandBrake-Completed-Manager-0.8.0-win-x64.zip
 ```
 
 Build output under `artifacts` is intentionally excluded from source control. A different semantic version can be selected explicitly:
 
 ```powershell
-.\scripts\publish-portable.ps1 -Version 0.7.2
+.\scripts\publish-portable.ps1 -Version 0.8.0
 ```
 
 The first verified release target is Windows x64. Other architectures should be added only with architecture-appropriate package execution tests.

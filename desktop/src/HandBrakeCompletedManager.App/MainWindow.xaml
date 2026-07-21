@@ -362,8 +362,7 @@
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="COMPLETED" Binding="{Binding Completed}" SortMemberPath="Record.CompletedAtUtc" Width="150" />
-                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" SortMemberPath="Record.CurrentStatus" Width="140" />
-                                <DataGridTextColumn Header="SOURCE REPLACEMENT" Binding="{Binding SourceReplacement}" SortMemberPath="SourceReplacement" Width="145" />
+                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" SortMemberPath="Status" Width="205" />
                                 <DataGridTextColumn Header="SOURCE" Binding="{Binding SourceFilename}" SortMemberPath="Record.SourceFilename" Width="*" MinWidth="170" />
                                 <DataGridTextColumn Header="ORIGINAL" Binding="{Binding SourceSize}" SortMemberPath="Record.SourceSize" Width="110" />
                                 <DataGridTextColumn Header="CONVERTED" Binding="{Binding DestinationSize}" SortMemberPath="Record.DestinationSize" Width="115" />

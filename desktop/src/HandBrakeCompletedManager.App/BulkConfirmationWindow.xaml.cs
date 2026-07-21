@@ -9,14 +9,21 @@ public partial class BulkConfirmationWindow : Window
         string heading,
         string description,
         string actionLabel,
-        IReadOnlyList<BulkConfirmationItem> items)
+        IReadOnlyList<BulkConfirmationItem> items,
+        string? secondaryActionLabel = null)
     {
         ArgumentNullException.ThrowIfNull(items);
         InitializeComponent();
+        PopupWindowRendering.Stabilize(this);
         Title = title;
         HeadingText.Text = heading;
         DescriptionText.Text = description;
         ConfirmButton.Content = actionLabel;
+        if (!string.IsNullOrWhiteSpace(secondaryActionLabel))
+        {
+            SecondaryConfirmButton.Content = secondaryActionLabel;
+            SecondaryConfirmButton.Visibility = Visibility.Visible;
+        }
         Items = items;
         DataContext = this;
 
@@ -26,11 +33,19 @@ public partial class BulkConfirmationWindow : Window
             ? $"All {eligibleCount:N0} selected item(s) passed the initial review. Every path is listed below."
             : $"{eligibleCount:N0} item(s) can proceed; {blockedCount:N0} are blocked and will be skipped. Every path and initial status is listed below.";
         ConfirmButton.IsEnabled = eligibleCount > 0;
+        SecondaryConfirmButton.IsEnabled = eligibleCount > 0;
     }
 
     public IReadOnlyList<BulkConfirmationItem> Items { get; }
+    public bool SecondaryActionSelected { get; private set; }
 
     private void ConfirmButton_Click(object sender, RoutedEventArgs e) => DialogResult = true;
+
+    private void SecondaryConfirmButton_Click(object sender, RoutedEventArgs e)
+    {
+        SecondaryActionSelected = true;
+        DialogResult = true;
+    }
 }
 
 public sealed record BulkConfirmationItem(

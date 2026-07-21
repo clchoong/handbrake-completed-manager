@@ -276,7 +276,7 @@ Add a **Replace Source** button.
 
 Purpose:
 
-Create a verified converted file beside the original source, retain a verified backup, and only then recycle or archive the original source through a recoverable transaction.
+Move the encoded output into the source library with familiar cut-and-paste behavior. The default action consumes the separate output. An alternate action keeps the output by copying it.
 
 Example:
 
@@ -299,38 +299,18 @@ becomes:
 
 `My Holiday Recording.mp4`
 
-## Safe replacement workflow
+## Direct replacement workflow
 
-The replacement operation is destructive, so use a safe process.
+The normal interface presents one clear warning that the original cannot be recovered, followed by two choices:
 
-The normal interface presents one clear exact-path warning followed by one overall file-copy-style progress window. Internal preflight, copy, backup, verification, promotion, recycling, and transaction checkpoints remain automatic. Detailed transaction controls belong in Recovery rather than the normal replacement path.
+1. **Replace Source** — the default; move the output into the source library and remove the separate output.
+2. **Replace Source and Keep Output** — copy the output into the source library and keep the separate output.
 
-1. Confirm the source file exists.
-2. Confirm the converted file exists.
-3. Confirm the converted file is not still being written.
-4. Display both file sizes.
-5. Display expected storage savings.
-6. Check for filename conflicts.
-7. Validate the converted file.
-8. Copy the converted file to a temporary filename in the source location.
-9. Show live transfer progress.
-10. Verify the completed copy.
-11. Copy and verify the original source in its backup folder.
-12. Persist promotion intent, then atomically rename the copied converted file to its final name.
-13. Verify the promoted final file while the original source remains present.
-14. After the user confirms the reviewed replacement, persist removal intent and recycle or archive the original source.
-15. Mark the record as Source Replaced.
-16. Retain a revisioned transaction journal and enough verified information to undo the replacement.
+Same-volume default replacement should use filesystem moves. Cross-volume and keep-output operations copy once into a temporary file in the source directory, show byte progress, and permit cancellation before the destructive boundary. Do not create an original backup or calculate whole-file checksums in this normal workflow.
 
-Never delete the source before the converted file has been copied and verified.
+Never remove the source until the move has completed or the copied temporary file has the expected output length. Refuse unrelated occupied targets. Matching extensions use the Windows atomic replacement operation; differing extensions permanently delete the original immediately before renaming the prepared output into place.
 
-For transfers between different drives, always:
-
-1. Copy
-2. Verify
-3. Archive or delete original
-
-Do not depend on a normal file move across drives.
+Cancellation removes the partial temporary copy, preserves source and output, and permits retry. After the destructive boundary begins, cancellation is disabled so the short installation sequence can finish.
 
 ## Live transfer tracking
 
@@ -434,7 +414,9 @@ Do not delete the source when verification fails.
 
 Allow the user to review and override a warning, but require clear confirmation.
 
-## Original backup and Undo
+## Legacy original backup and Undo
+
+The following behavior applies only to replacement operations created by older releases. It is not part of the current direct replacement workflow.
 
 Default behaviour should be to move the original source into a backup folder instead of deleting it immediately.
 
@@ -812,15 +794,15 @@ Use clear status labels and avoid overly technical wording in the main interface
 
 ## Safety rules
 
-These rules are mandatory:
+These rules are mandatory for the current workflow:
 
-1. Never delete the source before the converted file is copied and verified.
+1. Never delete the source before the output has been moved into position or a complete same-length temporary copy exists.
 2. Never overwrite an unrelated file automatically.
 3. Never combine Remove from History with Delete File.
-4. Never permanently delete by default.
-5. Keep enough state to recover from an interrupted replacement.
+4. Warn clearly that direct replacement permanently removes the original and cannot be undone.
+5. Allow copy cancellation and retry before the destructive boundary.
 6. Use temporary filenames during transfer.
-7. Keep the original source backup by default.
+7. Do not create a source backup or checksum in the direct replacement workflow.
 8. Confirm destructive bulk actions.
 9. Do not automatically replace sources in the initial version.
 10. Do not depend on HandBrake’s completed Queue history.

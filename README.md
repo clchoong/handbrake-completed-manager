@@ -61,7 +61,7 @@ Create and verify the Windows x64 portable package:
 
 The generated folder and ZIP archive are placed under `artifacts\portable\win-x64\`, which is intentionally excluded from source control. See [Portable release](docs/portable-release.md) for package contents, storage behavior, and verification details.
 
-Phase 1 established non-destructive completed-history management. Phase 2 adds replacement safety preflight, persistent recovery state, explicitly confirmed temporary and original-backup copies, guarded atomic promotion, forced Windows Recycle Bin source retirement, atomic forward completion, record-specific restart continuation, and a complete source-first undo workflow. Permanent deletion is not used for managed media-file retirement.
+Phase 1 established non-destructive completed-history management. The current replacement workflow provides a direct, cancellable cut-and-paste-style operation with an explicit irreversible-action warning. Older verified backup and recovery components remain available only for operations created by earlier versions.
 
 ## Implemented capabilities
 
@@ -79,10 +79,10 @@ The current Phase 1 implementation provides:
 - Selected history records support source/output playback and Explorer reveal; double-click opens the output.
 - Multi-term search, quick filters, correctly typed column sorting, result counts, and record details support history review.
 - Ctrl-click, Shift-click, Ctrl+A, **Select all shown**, and **Clear selection** support deliberate multi-row management while single-file playback and reveal actions remain limited to one row.
-- The history table clearly identifies source replacement as not replaced, in progress, needing attention, replaced, or restored.
+- The history Status column records meaningful file outcomes: **Output Deleted**, **Source Replaced**, or **Source Replaced, Output Kept**.
 - **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
 - Bulk output recycling lists every selected path, skips initially ineligible records, revalidates and recycles eligible outputs sequentially, supports stopping between items, and reports succeeded, failed, and skipped totals.
-- Bulk source replacement preflights all selected records, blocks cross-selection final-path collisions, displays every source and target before confirmation, runs the existing verified replacement transaction sequentially, and retains record-specific recovery state after any failure.
+- Bulk source replacement lists every source and target, blocks duplicate targets, supports the same output-retention choice, and runs selected items sequentially.
 - Bulk Remove from History deletes only the selected SQLite records and never changes source or output files.
 - Confirmed Remove from History deletes only the SQLite record and never modifies either video file.
 - The notification-area icon supports close-to-tray, record-count status, Open, Refresh, and clean Exit commands.
@@ -91,8 +91,10 @@ The current Phase 1 implementation provides:
 - Non-fatal daily diagnostic logs cover desktop and receiver operational events.
 - A marker-based portable mode keeps history, settings, connections, and logs beside the application.
 - Release automation publishes and smoke-tests self-contained single-file desktop and receiver executables.
-- A replacement preflight reports changed files, missing files, path conflicts, and unsafe metadata before a temporary copy can be prepared.
-- Same-extension encodes are supported: after both files are independently verified, Windows atomically replaces the original source path while retaining the HandBrake output and verified original backup.
+- **Replace Source** permanently moves the encoded output into the source library and is the default choice; **Replace Source and Keep Output** copies it instead.
+- Same-volume default replacement uses fast filesystem moves. Cross-volume and keep-output operations show byte progress and can be cancelled before the destructive boundary.
+- Direct replacement skips backup creation and SHA-256 verification. It checks the transferred file length and refuses unrelated occupied targets.
+- Cancelled or failed transfers can be retried from the same history row.
 - Persistent replacement, original-backup, finalisation, and undo stages support record-specific interruption recovery through terminal `Completed` and `Undone` checkpoints.
 - The replacement review displays existing recovery state and can create a new `.hbcm-copying` file after explicit confirmation, with live progress, cancellation, durable state, and size/SHA-256 verification without modifying either original file.
 - Retained temporary artifacts can be permanently discarded after a separate confirmation; cleanup validates every recorded path, refuses active file locks or stale state, and immediately re-runs preflight for a safe retry.
@@ -103,10 +105,10 @@ The current Phase 1 implementation provides:
 - Successful readiness review persists a revisioned transaction journal containing verified source and final-file digests.
 - After explicit confirmation, the prepared temporary copy can be atomically renamed to an unoccupied final path while read locks protect the source and backup. Intent-first recovery handles interruption before or after the rename without overwriting a file.
 - The desktop undo workflow explicitly prepares undo, reconstructs the source through a resumable verified artifact, recycles the promoted final only after source verification, and atomically restores source availability in history.
-- **Replace source** uses one exact-path warning and one overall file-copy-style progress window while temporary-copy verification, original-backup verification, atomic promotion, Windows Recycle Bin source retirement, and atomic completion run internally with durable recovery checkpoints.
+- Legacy verified replacement and Recovery controls remain available for unfinished operations created by earlier releases.
 - Bulk history removal closes its confirmation before opening a dedicated responsive progress window that identifies the active record and retains the final totals.
 - Settings remain vertically scrollable at smaller window sizes and display scaling, and About reports the packaged version, MIT licence, independence notice, platform, runtime, storage boundary, and project links.
-- A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, a focused one-click replacement experience, and collapsed advanced recovery controls across Windows 10 and Windows 11.
+- A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, and consistently rendered secondary windows across Windows 10 and Windows 11.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, file actions, guarded output recycling, and replacement-state presentation.
@@ -126,10 +128,11 @@ The current Phase 1 implementation provides:
 - [Version 0.7.0 release notes](docs/releases/v0.7.0.md): simplified replacement, responsive bulk removal, Settings scrolling, and About
 - [Version 0.7.1 release notes](docs/releases/v0.7.1.md): same-extension source replacement and reliable first-paint progress dialogs
 - [Version 0.7.2 release notes](docs/releases/v0.7.2.md): corrected same-extension replacement messaging
+- [Version 0.8.0 release notes](docs/releases/v0.8.0.md): direct cancellable replacement, output-retention choice, meaningful statuses, and popup rendering fixes
 - [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum
-- [One-click safe source replacement](docs/one-click-safe-replacement.md): single-confirmation execution, stage ordering, refusal rules, and recovery behavior
+- [Direct source replacement](docs/one-click-safe-replacement.md): move/copy choices, cancellation, retry, and irreversible boundary
 - [Desktop UI design](docs/desktop-ui-design.md): visual system, information hierarchy, replacement experience, accessibility, and scaling behavior
 - [Publishing and independence](docs/publishing-and-independence.md): HandBrake relationship, GPL boundary, branding, and repository licensing decisions
 - [Replacement safety preflight](docs/replacement-preflight.md): review checks, planned paths, persistent recovery state, and disabled execution boundaries
