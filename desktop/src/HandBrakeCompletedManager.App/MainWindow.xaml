@@ -18,7 +18,6 @@
             <Setter Property="Foreground" Value="{StaticResource InkMutedBrush}" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
                     <Setter Property="Foreground" Value="White" />
                 </Trigger>
             </Style.Triggers>
@@ -420,33 +419,43 @@
 
                         <Border x:Name="DetailsPanel"
                                 Grid.Row="3"
+                                Height="160"
                                 Padding="18,14"
                                 Background="#F8F9FC"
                                 BorderBrush="{StaticResource LineBrush}"
-                                BorderThickness="0,1,0,0"
-                                Visibility="Collapsed">
+                                BorderThickness="0,1,0,0">
                             <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="72" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8" Orientation="Horizontal">
-                                    <TextBlock FontWeight="SemiBold" Text="Record details" />
-                                    <TextBlock x:Name="DetailsCompletedText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
-                                    <TextBlock x:Name="DetailsStatusText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
+                                <Grid x:Name="DetailsContentGrid" Visibility="Collapsed">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8" Orientation="Horizontal">
+                                        <TextBlock FontWeight="SemiBold" Text="Record details" />
+                                        <TextBlock x:Name="DetailsCompletedText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
+                                        <TextBlock x:Name="DetailsStatusText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="1" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="SOURCE" />
+                                    <TextBox x:Name="DetailsSourcePathTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
+                                    <TextBlock Grid.Row="2" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="OUTPUT" />
+                                    <TextBox x:Name="DetailsDestinationPathTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
+                                    <TextBlock Grid.Row="3" Style="{StaticResource EyebrowStyle}" Text="METRICS" />
+                                    <TextBlock x:Name="DetailsMetricsText" Grid.Row="3" Grid.Column="1" Foreground="{StaticResource InkMutedBrush}" />
+                                </Grid>
+                                <StackPanel x:Name="DetailsPlaceholderPanel" VerticalAlignment="Center">
+                                    <TextBlock x:Name="DetailsPlaceholderTitle" FontWeight="SemiBold" Text="Record details" />
+                                    <TextBlock x:Name="DetailsPlaceholderText"
+                                               Margin="0,7,0,0"
+                                               Foreground="{StaticResource InkMutedBrush}"
+                                               Text="Select one item to view its record details."
+                                               TextWrapping="Wrap" />
                                 </StackPanel>
-                                <TextBlock Grid.Row="1" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="SOURCE" />
-                                <TextBox x:Name="DetailsSourcePathTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
-                                <TextBlock Grid.Row="2" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="OUTPUT" />
-                                <TextBox x:Name="DetailsDestinationPathTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
-                                <TextBlock Grid.Row="3" Style="{StaticResource EyebrowStyle}" Text="METRICS" />
-                                <TextBlock x:Name="DetailsMetricsText" Grid.Row="3" Grid.Column="1" Foreground="{StaticResource InkMutedBrush}" />
                             </Grid>
                         </Border>
                     </Grid>

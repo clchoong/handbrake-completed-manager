@@ -109,7 +109,8 @@ The current Phase 1 implementation provides:
 - Bulk history removal closes its confirmation before opening a dedicated responsive progress window that identifies the active record and retains the final totals.
 - Settings remain vertically scrollable at smaller window sizes and display scaling, and About reports the packaged version, MIT licence, independence notice, platform, runtime, storage boundary, and project links.
 - A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, and consistently rendered secondary windows across Windows 10 and Windows 11.
-- Completed-history headers and cells share comfortable padding. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values from 90% use the same treatment in red.
+- Completed-history headers and data text share 16-by-6 spacing, and the number cell uses the same blue selection state as the rest of its row. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values from 90% use the same treatment in red.
+- Record Details always reserves a fixed area; zero and multiple selections show guidance instead of changing the completed-library height.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, file actions, guarded output recycling, and replacement-state presentation.
@@ -133,6 +134,7 @@ The current Phase 1 implementation provides:
 - [Version 0.8.1 release notes](docs/releases/v0.8.1.md): replacement playback, automatic bulk progression, stable refresh selection, table polish, and legacy-history removal
 - [Version 0.9.0 release notes](docs/releases/v0.9.0.md): unified bulk progress, live numbering, padded cells, and output-percentage highlighting
 - [Version 0.9.1 release notes](docs/releases/v0.9.1.md): live aggregate progress, aligned padding, selected numbering, solid percentage states, and Delete shortcut
+- [Version 0.9.2 release notes](docs/releases/v0.9.2.md): corrected data-cell spacing, unified blue numbering selection, and stable Record Details height
 - [Version 0.6.0 release notes](docs/releases/v0.6.0.md): saved-log recovery and desktop lifecycle fixes
 - [Version 0.5.0 release notes](docs/releases/v0.5.0.md): multi-selection and bulk-management highlights, installation boundary, and checksum
 - [Version 0.4.0 release notes](docs/releases/v0.4.0.md): first public-release highlights, installation boundary, and checksum

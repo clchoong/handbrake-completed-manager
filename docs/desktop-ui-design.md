@@ -28,7 +28,9 @@ This keeps the normal path aligned with familiar cut-and-paste behavior. Legacy 
 
 `Themes/DesignSystem.xaml` defines application-wide colors, typography, cards, buttons, inputs, progress indicators, data grids, focus states, and disabled states. Main, replacement, recovery, settings, progress, and About windows consume the same resources.
 
-The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**. A leading 1-based number follows the current filter and sort order; its selected state uses the accent background and white text. Headers and vertically centred cells share 16-by-6 padding and column-header dividers keep dense rows readable. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values at or above 90% use the equivalent red treatment regardless of row selection.
+The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**. A leading 1-based number follows the current filter and sort order; its selected state inherits the same blue as the other selected cells and uses white text. Header padding and the data TextBlock margin both use 16-by-6 spacing, ensuring values begin at the same inset as their titles. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values at or above 90% use the equivalent red treatment regardless of row selection.
+
+Record Details occupies a fixed 160-pixel area. Its single-record content is replaced by zero-selection or multiple-selection guidance without collapsing the area, so the table and surrounding window do not jump when selection cardinality changes.
 
 Bulk replacement has a single resizable progress surface. It combines a continuously updated overall bar and `processed/total` counter with a byte-based bar and status for every eligible file. The overall percentage includes the active item's fractional byte progress while keeping completed, failed, cancelled, waiting, and skipped items visible together.
 

@@ -20,9 +20,11 @@ The visible-result count updates whenever search text, a quick filter, or histor
 
 The first column numbers the currently displayed rows from 1 in their active filtered and sorted order. Select any sortable column heading to reorder the visible records. Date, file-size, percentage, and storage-saved columns use their raw values, so sorting is numeric or chronological rather than alphabetical.
 
-Column headers and data cells use the same horizontal and vertical padding. The selected row-number cell uses the Replace Source orange with white text. **Output Size** values from 80% through 89% use that same solid orange and white text in both selected and unselected rows; values from 90% use the equivalent solid red treatment. Values below 80% retain the normal table style.
+Column headers and the actual data text elements use the same 16-by-6 horizontal and vertical spacing, keeping every value aligned with its title. The selected row-number cell inherits the same blue background as the rest of the selected row and uses white text. **Output Size** values from 80% through 89% use the solid Replace Source orange and white text in both selected and unselected rows; values from 90% use the equivalent solid red treatment. Values below 80% retain the normal table style.
 
 Selecting one row displays its completion time, file-action status, full source and output paths, size comparison, exit code, and current file availability. Automatic refresh first compares the latest database result with the displayed rows. It does not rebuild an unchanged list, and selected records remain selected when changed data is applied and they still match the active filter.
+
+The Record Details area always reserves the same fixed height. With no selection it asks the user to select one item. With multiple selections it reports the selected count and explains that one item is required for record-specific details. This prevents selection changes from resizing the completed-library area.
 
 Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
 

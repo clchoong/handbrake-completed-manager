@@ -1,6 +1,6 @@
 # Release readiness
 
-Version 0.9.1 was validated as a self-contained Windows x64 open-source release candidate on 22 July 2026.
+Version 0.9.2 was validated as a self-contained Windows x64 open-source release candidate on 22 July 2026.
 
 ## Validation result
 
@@ -20,17 +20,18 @@ Version 0.9.1 was validated as a self-contained Windows x64 open-source release 
 - Bulk source replacement uses one persistent window with a real-time fractional total bar, a `processed/total` counter, and a byte-progress bar for every eligible file.
 - The history table uses matching header/cell padding, selected number-cell contrast, and tested solid orange/red output-percentage thresholds.
 - The Delete key invokes the existing confirmed single or bulk Remove History workflow and never deletes media files.
+- Data text receives its 16-by-6 inset directly, the number cell inherits the standard blue selection state, and Record Details reserves a fixed area for zero, one, or multiple selections.
 - The portable receiver recorded a completion event into a clean portable SQLite database.
 - The receiver and desktop application used the same adjacent portable data and log locations.
 - The packaged desktop application started and initialized successfully.
 - Package verification removed all generated history, settings, logs, and temporary media before distribution.
 - Archive inspection found no private developer metadata or local development paths.
-- Packaged executable metadata reports product version `0.9.1` and company `clchoong`.
+- Packaged executable metadata reports product version `0.9.2` and company `clchoong`.
 
-The validated archive is `HandBrake-Completed-Manager-0.9.1-win-x64.zip`. Its size is 116,238,597 bytes and its SHA-256 checksum is:
+The validated archive is `HandBrake-Completed-Manager-0.9.2-win-x64.zip`. Its size is 116,238,838 bytes and its SHA-256 checksum is:
 
 ```text
-B3D17C5797018EA2DCC5C01EB3A97F9CFD0FE6E9DCCFBA35E974849261EECC92
+E3260D62CFA68C293CD7CA47A940D7C4BA2A6B99AF76FB1D2837BA1631FAC762
 ```
 
 ## Supported release boundary
@@ -49,5 +50,5 @@ B3D17C5797018EA2DCC5C01EB3A97F9CFD0FE6E9DCCFBA35E974849261EECC92
 ```powershell
 dotnet build .\desktop\HandBrakeCompletedManager.sln --configuration Release
 dotnet test .\desktop\HandBrakeCompletedManager.sln --configuration Release --no-build
-.\scripts\publish-portable.ps1 -Version 0.9.1
+.\scripts\publish-portable.ps1 -Version 0.9.2
 ```

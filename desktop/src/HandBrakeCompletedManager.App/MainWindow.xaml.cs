@@ -645,7 +645,7 @@ public partial class MainWindow : Window
             1 => $"Selected: {row!.DestinationFilename}",
             _ => $"{selectedRows.Count:N0} completed encodes selected"
         };
-        UpdateDetailsPanel(row);
+        UpdateDetailsPanel(row, selectedRows.Count);
     }
 
     private IReadOnlyList<HistoryRow> GetSelectedRows()
@@ -786,14 +786,23 @@ public partial class MainWindow : Window
         SelectAllShownButton.IsEnabled = _historyView.Cast<object>().Any() && !_bulkOperationInProgress;
     }
 
-    private void UpdateDetailsPanel(HistoryRow? row)
+    private void UpdateDetailsPanel(HistoryRow? row, int selectedCount)
     {
         if (row is null)
         {
-            DetailsPanel.Visibility = Visibility.Collapsed;
+            DetailsContentGrid.Visibility = Visibility.Collapsed;
+            DetailsPlaceholderPanel.Visibility = Visibility.Visible;
+            DetailsPlaceholderTitle.Text = selectedCount > 1
+                ? $"Record details — {selectedCount:N0} items selected"
+                : "Record details";
+            DetailsPlaceholderText.Text = selectedCount > 1
+                ? "Multiple items selected. Select one item to view its record details."
+                : "Select one item to view its record details.";
             return;
         }
 
+        DetailsPlaceholderPanel.Visibility = Visibility.Collapsed;
+        DetailsContentGrid.Visibility = Visibility.Visible;
         DetailsCompletedText.Text = row.Completed;
         DetailsStatusText.Text = string.IsNullOrWhiteSpace(row.Status) ? "No file action" : row.Status;
         DetailsSourcePathTextBox.Text = row.SourcePath;
@@ -804,7 +813,6 @@ public partial class MainWindow : Window
             $"Exit code {row.Record.ExitCode}  |  " +
             $"source {(row.SourceAvailable ? "available" : "missing")}, " +
             $"output {(row.OutputAvailable ? "available" : "missing")}";
-        DetailsPanel.Visibility = Visibility.Visible;
     }
 
     private void HistoryGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
