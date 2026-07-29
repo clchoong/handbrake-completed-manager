@@ -11,6 +11,10 @@ It is intentionally a completed-encode history and file-management application�
 
 > **Independent third-party project:** This project is not affiliated with, endorsed by, or maintained by the HandBrake project. “HandBrake” is used only to identify compatibility with the official [HandBrake](https://handbrake.fr/) application. No HandBrake source code, binaries, or graphic assets are included.
 
+## Application preview
+
+![HandBrake Completed Manager showing an anonymised completed-encode library](docs/images/handbrake-completed-manager.png)
+
 ## Licence
 
 The project's original source code is available under the [MIT License](LICENSE). Distributed builds also include the applicable .NET, Microsoft.Data.Sqlite, SQLitePCLRaw, and SQLite notices. HandBrake is separate software governed by [its own licence](https://github.com/HandBrake/HandBrake/blob/master/LICENSE).
