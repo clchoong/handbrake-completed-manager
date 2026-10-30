@@ -134,6 +134,7 @@ The current Phase 1 implementation provides:
 - [About and software information](docs/about.md): version, licence, independence, platform, runtime, storage, and notice links
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
+- [Version 0.9.4 release notes](docs/releases/v0.9.4.md): context menu, background refresh, diagnostics, and history backup/export
 - [Version 0.7.0 release notes](docs/releases/v0.7.0.md): simplified replacement, responsive bulk removal, Settings scrolling, and About
 - [Version 0.7.1 release notes](docs/releases/v0.7.1.md): same-extension source replacement and reliable first-paint progress dialogs
 - [Version 0.7.2 release notes](docs/releases/v0.7.2.md): corrected same-extension replacement messaging
