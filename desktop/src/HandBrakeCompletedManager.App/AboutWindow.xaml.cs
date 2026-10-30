@@ -10,7 +10,7 @@ public partial class AboutWindow : Window
 {
     private const string ProjectUrl = "https://github.com/clchoong/handbrake-completed-manager";
 
-    public AboutWindow()
+    public AboutWindow(int historyCount = 0, long workingSetBytes = 0, TimeSpan? lastRefresh = null)
     {
         InitializeComponent();
         PopupWindowRendering.Stabilize(this);
@@ -23,6 +23,7 @@ public partial class AboutWindow : Window
             : informationalVersion.Split('+')[0];
         VersionText.Text = $"Version {version}";
         RuntimeText.Text = $"{RuntimeInformation.FrameworkDescription} · {RuntimeInformation.ProcessArchitecture}";
+        DiagnosticsText.Text = $"History records: {historyCount:N0}\nMemory currently in use: {workingSetBytes / 1024d / 1024d:N1} MB\nLast history refresh: {(lastRefresh is null ? "Not yet measured" : $"{lastRefresh.Value.TotalMilliseconds:N0} ms")}";
     }
 
     private void ProjectPageButton_Click(object sender, RoutedEventArgs e) => Open(ProjectUrl);

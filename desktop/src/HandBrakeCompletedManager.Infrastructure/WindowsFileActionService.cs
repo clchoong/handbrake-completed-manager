@@ -78,7 +78,7 @@ public sealed class WindowsFileActionService
             var fullPath = Path.GetFullPath(filePath);
             if (!File.Exists(fullPath))
             {
-                return new FileActionResult(false, $"The file no longer exists: {fullPath}");
+                return new FileActionResult(false, $"The file is unavailable: {fullPath}. Check that the drive is connected and accessible.");
             }
 
             _startProcess(createStartInfo(fullPath));
@@ -88,7 +88,7 @@ public sealed class WindowsFileActionService
             exception is ArgumentException or NotSupportedException or PathTooLongException or
                 IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception)
         {
-            return new FileActionResult(false, $"Unable to open the file: {exception.Message}");
+            return new FileActionResult(false, $"Unable to open {filePath}. Check the drive connection and permissions. {exception.Message}");
         }
     }
 }

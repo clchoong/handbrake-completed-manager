@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,6 +18,7 @@ namespace HandBrakeCompletedManager.App;
 public partial class MainWindow : Window
 {
     private readonly string _databasePath = StoragePaths.ResolveDatabasePath();
+    private TimeSpan? _lastRefreshDuration;
     private readonly CompletedEncodeRepository _repository;
     private readonly HandBrakeDetector _handBrakeDetector = new();
     private readonly HandBrakeConnectionTester _connectionTester = new();
@@ -159,7 +161,7 @@ public partial class MainWindow : Window
         await LoadHistoryAsync();
         await RefreshRecoverySummaryAsync();
         await FindHandBrakeAsync();
-        _historyRefreshTimer.Start();
+        if (IsVisible) _historyRefreshTimer.Start();
     }
 
     private async Task LoadApplicationSettingsAsync()
@@ -213,7 +215,38 @@ public partial class MainWindow : Window
 
     private void AboutButton_Click(object sender, RoutedEventArgs e)
     {
-        new AboutWindow { Owner = this }.ShowDialog();
+        using var process = Process.GetCurrentProcess();
+        new AboutWindow(HistoryRows.Count, process.WorkingSet64, _lastRefreshDuration) { Owner = this }.ShowDialog();
+    }
+
+    private async void ArchiveButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Back up or export history",
+            Filter = "SQLite backup (*.db)|*.db|JSON history export (*.json)|*.json",
+            FileName = $"handbrake-history-{DateTime.Now:yyyy-MM-dd-HHmmss}",
+            OverwritePrompt = false,
+            AddExtension = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        ArchiveButton.IsEnabled = false;
+        StatusText.Text = "Saving history...";
+        try
+        {
+            var archive = new HistoryArchiveService(_databasePath);
+            if (dialog.FilterIndex == 1)
+                await Task.Run(() => archive.Backup(dialog.FileName));
+            else
+                await Task.Run(() => archive.ExportJsonAsync(dialog.FileName));
+            StatusText.Text = $"History saved to {dialog.FileName}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = "Unable to save history.";
+            System.Windows.MessageBox.Show(this, $"Unable to save history. Choose a new filename and check the destination drive.\n\n{exception.Message}", "History backup or export", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally { ArchiveButton.IsEnabled = true; }
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
@@ -317,6 +350,7 @@ public partial class MainWindow : Window
 
         e.Cancel = true;
         Hide();
+        _historyRefreshTimer.Stop();
         StatusText.Text = "Running in the notification area.";
         _ = _logger.LogAsync(DiagnosticLogLevel.Information, "Main window hidden in the notification area.");
 
@@ -336,6 +370,7 @@ public partial class MainWindow : Window
 
     private void OpenFromTray()
     {
+        var wasHidden = !IsVisible;
         Show();
         if (WindowState == WindowState.Minimized)
         {
@@ -343,6 +378,11 @@ public partial class MainWindow : Window
         }
 
         Activate();
+        if (wasHidden && !_bulkOperationInProgress)
+        {
+            _historyRefreshTimer.Start();
+            _ = LoadHistoryAsync(isAutomaticRefresh: true);
+        }
     }
 
     private void RefreshFromTray()
@@ -1671,6 +1711,7 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = false;
         RefreshButton.IsEnabled = false;
         SettingsButton.IsEnabled = false;
+        ArchiveButton.IsEnabled = false;
         AboutButton.IsEnabled = false;
         ImportLogsButton.IsEnabled = false;
         SelectAllShownButton.IsEnabled = false;
@@ -1692,12 +1733,13 @@ public partial class MainWindow : Window
         QuickFilterComboBox.IsEnabled = true;
         RefreshButton.IsEnabled = true;
         SettingsButton.IsEnabled = true;
+        ArchiveButton.IsEnabled = true;
         AboutButton.IsEnabled = true;
         ImportLogsButton.IsEnabled = true;
         StopBulkButton.Visibility = Visibility.Collapsed;
         StopBulkButton.Content = "Stop after current";
         StopBulkButton.IsEnabled = true;
-        _historyRefreshTimer.Start();
+        if (IsVisible) _historyRefreshTimer.Start();
         HistoryGrid_SelectionChanged(this, new SelectionChangedEventArgs(
             Selector.SelectionChangedEvent,
             Array.Empty<object>(),
@@ -1749,9 +1791,10 @@ public partial class MainWindow : Window
         RunFileAction(action, selectPath(row));
     }
 
-    private void RunFileAction(Func<string, FileActionResult> action, string path)
+    private async void RunFileAction(Func<string, FileActionResult> action, string path)
     {
-        var result = action(path);
+        StatusText.Text = "Opening file location; waiting for the drive if necessary...";
+        var result = await Task.Run(() => action(path));
         StatusText.Text = result.Message;
     }
 
@@ -1762,6 +1805,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var refreshTimer = Stopwatch.StartNew();
         try
         {
             _isLoadingHistory = true;
@@ -1771,10 +1815,13 @@ public partial class MainWindow : Window
                 StatusText.Text = "Loading completed history...";
             }
 
-            var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
-            await _repository.InitializeAsync();
-            var records = await _repository.GetAllAsync();
-            var replacementStates = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
+            var (records, replacementStates) = await Task.Run(async () =>
+            {
+                await _repository.InitializeAsync();
+                var loadedRecords = await _repository.GetAllAsync();
+                var states = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
+                return (loadedRecords, states);
+            });
             var refreshedRows = records.Select(record => HistoryRow.From(
                 record,
                 replacementStates.GetValueOrDefault(
@@ -1792,6 +1839,10 @@ public partial class MainWindow : Window
                 return;
             }
 
+            var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
+            var pageOffset = PageScrollViewer.VerticalOffset;
+            var gridScroller = FindVisualChild<ScrollViewer>(HistoryGrid);
+            var gridOffset = gridScroller?.VerticalOffset ?? 0;
             HistoryRows.Clear();
             foreach (var row in refreshedRows)
             {
@@ -1808,6 +1859,12 @@ public partial class MainWindow : Window
                 }
             }
 
+            await Dispatcher.InvokeAsync(() =>
+            {
+                PageScrollViewer.ScrollToVerticalOffset(pageOffset);
+                gridScroller?.ScrollToVerticalOffset(gridOffset);
+            }, DispatcherPriority.Loaded);
+
             UpdateSummary(records);
             StatusText.Text = isAutomaticRefresh
                 ? $"History updated automatically - {records.Count:N0} record(s)."
@@ -1820,6 +1877,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _lastRefreshDuration = refreshTimer.Elapsed;
             _isLoadingHistory = false;
             RefreshButton.IsEnabled = true;
         }

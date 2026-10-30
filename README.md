@@ -76,7 +76,9 @@ The current Phase 1 implementation provides:
 - SQLite stores completed history and rejects repeated callbacks with the same fingerprint.
 - Saved HandBrake activity logs can recover earlier successful encodes when the output still exists; paused, failed, malformed, missing-output, and duplicate logs are reviewed but skipped without modifying logs or media files.
 - The WPF application displays history and aggregate size totals.
-- History checks for receiver updates automatically while the application is open, but leaves the list and selection untouched when nothing changed.
+- History checks for receiver updates while the window is visible, pauses automatic checks in the tray, and refreshes when reopened. Selection and scroll position are preserved when possible.
+- **History file** saves a consistent SQLite backup or exports history as JSON. Exported records contain file paths; choose a private destination. Existing files are never overwritten.
+- About displays a snapshot of current app memory, history count, and the last refresh duration. File open and reveal actions run off the interface thread and report inaccessible paths.
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
 - Test Pipeline validates the event-to-SQLite path in an isolated temporary database.
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.

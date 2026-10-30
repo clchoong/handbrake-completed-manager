@@ -61,7 +61,7 @@ public sealed class WindowsFileActionServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.False(launched);
-        Assert.Contains("no longer exists", result.Message);
+        Assert.Contains("unavailable", result.Message);
     }
 
     [Fact]
