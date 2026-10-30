@@ -391,9 +391,24 @@
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
+                                  PreviewMouseRightButtonDown="HistoryGrid_PreviewMouseRightButtonDown"
+                                  ContextMenuOpening="HistoryGrid_ContextMenuOpening"
                                   PreviewKeyDown="HistoryGrid_PreviewKeyDown"
                                   PreviewMouseWheel="HistoryGrid_PreviewMouseWheel"
                                   MouseDoubleClick="HistoryGrid_MouseDoubleClick">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu x:Name="HistoryContextMenu">
+                                    <MenuItem x:Name="ContextReplace" Click="ReplaceSourceButton_Click" />
+                                    <Separator />
+                                    <MenuItem x:Name="ContextPlayOutput" Header="Play output" Click="PlayDestinationButton_Click" />
+                                    <MenuItem x:Name="ContextPlaySource" Header="Play source" Click="PlaySourceButton_Click" />
+                                    <MenuItem x:Name="ContextShowOutput" Header="Show output" Click="RevealDestinationButton_Click" />
+                                    <MenuItem x:Name="ContextShowSource" Header="Show source" Click="RevealSourceButton_Click" />
+                                    <Separator />
+                                    <MenuItem x:Name="ContextRecycle" Click="RecycleOutputButton_Click" />
+                                    <MenuItem x:Name="ContextRemove" Click="RemoveHistoryButton_Click" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="#" Width="56" CanUserSort="False" CellStyle="{StaticResource NumberCellStyle}">
                                     <DataGridTemplateColumn.CellTemplate>

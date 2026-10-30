@@ -83,6 +83,7 @@ The current Phase 1 implementation provides:
 - Selected history records support source/output playback and Explorer reveal; double-click opens the output, or the replacement file after the output has been consumed.
 - Multi-term search, quick filters, correctly typed column sorting, live row numbering, result counts, and record details support history review.
 - Ctrl-click, Shift-click, Ctrl+A, **Select all shown**, and **Clear selection** support deliberate multi-row management while single-file playback and reveal actions remain limited to one row.
+- Right-click a history row to access replacement, playback, file locations, recycling, and history removal without returning to the toolbar. Right-clicking a selected row retains the current multi-selection; right-clicking another row selects it.
 - The history Status column records meaningful file outcomes: **Output Deleted**, **Source Replaced**, or **Source Replaced, Output Kept**.
 - **Recycle output** verifies the selected output against its captured size and timestamp, blocks unfinished replacement dependencies, and moves the file to the Windows Recycle Bin while retaining the source and history record.
 - Bulk output recycling lists every selected path, skips initially ineligible records, revalidates and recycles eligible outputs sequentially, supports stopping between items, and reports succeeded, failed, and skipped totals.

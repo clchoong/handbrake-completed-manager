@@ -815,6 +815,43 @@ public partial class MainWindow : Window
             $"output {(row.OutputAvailable ? "available" : "missing")}";
     }
 
+    private void HistoryGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source ||
+            ItemsControl.ContainerFromElement(HistoryGrid, source) is not DataGridRow row ||
+            row.Item is not HistoryRow)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (!row.IsSelected)
+        {
+            HistoryGrid.SelectedItems.Clear();
+            row.IsSelected = true;
+        }
+    }
+
+    private void HistoryGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (_bulkOperationInProgress || HistoryGrid.SelectedItems.Count == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        ContextReplace.Header = ReviewReplacementButton.Content;
+        ContextReplace.IsEnabled = ReviewReplacementButton.IsEnabled;
+        ContextPlayOutput.IsEnabled = PlayDestinationButton.IsEnabled;
+        ContextPlaySource.IsEnabled = PlaySourceButton.IsEnabled;
+        ContextShowOutput.IsEnabled = RevealDestinationButton.IsEnabled;
+        ContextShowSource.IsEnabled = RevealSourceButton.IsEnabled;
+        ContextRecycle.Header = RecycleOutputButton.Content;
+        ContextRecycle.IsEnabled = RecycleOutputButton.IsEnabled;
+        ContextRemove.Header = RemoveHistoryButton.Content;
+        ContextRemove.IsEnabled = RemoveHistoryButton.IsEnabled;
+    }
+
     private void HistoryGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is not DependencyObject source ||
