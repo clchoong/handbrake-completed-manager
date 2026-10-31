@@ -19,7 +19,7 @@ public partial class MainWindow : Window
 {
     private readonly string _databasePath = StoragePaths.ResolveDatabasePath();
     private TimeSpan? _lastRefreshDuration;
-    private readonly Dictionary<Guid, bool> _outputAvailability = new();
+    private readonly Dictionary<Guid, (string Path, bool Exists)> _sourceAvailability = new();
     private readonly CompletedEncodeRepository _repository;
     private readonly HandBrakeDetector _handBrakeDetector = new();
     private readonly HandBrakeConnectionTester _connectionTester = new();
@@ -252,7 +252,7 @@ public partial class MainWindow : Window
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
     {
-        await LoadHistoryAsync(checkOutputFiles: true);
+        await LoadHistoryAsync(checkSourceFiles: true);
         await RefreshRecoverySummaryAsync();
     }
 
@@ -1819,7 +1819,7 @@ public partial class MainWindow : Window
         StatusText.Text = result.Message;
     }
 
-    private async Task LoadHistoryAsync(bool isAutomaticRefresh = false, bool checkOutputFiles = false)
+    private async Task LoadHistoryAsync(bool isAutomaticRefresh = false, bool checkSourceFiles = false)
     {
         if (_isLoadingHistory)
         {
@@ -1843,21 +1843,25 @@ public partial class MainWindow : Window
                 var states = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
                 return (loadedRecords, states);
             });
-            var outputCheckTimedOut = false;
-            if (checkOutputFiles)
+            var sourceCheckTimedOut = false;
+            if (checkSourceFiles)
             {
-                StatusText.Text = "Checking output files...";
-                var checks = Task.Run(() => records.ToDictionary(record => record.Id, record => File.Exists(record.DestinationPath)));
+                StatusText.Text = "Checking source files...";
+                var checks = Task.Run(() => records.ToDictionary(record => record.Id, record =>
+                {
+                    var path = record.ReplacementPath ?? record.SourcePath;
+                    return (Path: path, Exists: File.Exists(path));
+                }));
                 if (await Task.WhenAny(checks, Task.Delay(TimeSpan.FromSeconds(8))) == checks)
                 {
                     var availability = await checks;
-                    _outputAvailability.Clear();
-                    foreach (var item in availability) _outputAvailability[item.Key] = item.Value;
+                    _sourceAvailability.Clear();
+                    foreach (var item in availability) _sourceAvailability[item.Key] = item.Value;
                 }
                 else
                 {
-                    outputCheckTimedOut = true;
-                    _outputAvailability.Clear();
+                    sourceCheckTimedOut = true;
+                    _sourceAvailability.Clear();
                 }
             }
             var refreshedRows = records.Select(record => HistoryRow.From(
@@ -1865,14 +1869,15 @@ public partial class MainWindow : Window
                 replacementStates.GetValueOrDefault(
                     record.Id,
                     SourceReplacementState.NotReplaced)) with
-                    { OutputMissingOnRefresh = _outputAvailability.TryGetValue(record.Id, out var exists) && !exists }).ToArray();
+                    { SourceMissingOnRefresh = _sourceAvailability.TryGetValue(record.Id, out var checkedSource) &&
+                        string.Equals(checkedSource.Path, record.ReplacementPath ?? record.SourcePath, StringComparison.OrdinalIgnoreCase) && !checkedSource.Exists }).ToArray();
 
             if (HistoryRows.SequenceEqual(refreshedRows))
             {
                 UpdateSummary(records);
                 if (!isAutomaticRefresh)
                 {
-                    StatusText.Text = outputCheckTimedOut ? "Output check timed out; check drive connections and try Refresh again." : $"{records.Count:N0} record(s) - {_databasePath}";
+                    StatusText.Text = sourceCheckTimedOut ? "Source check timed out; check drive connections and try Refresh again." : $"{records.Count:N0} record(s) - {_databasePath}";
                 }
 
                 return;
@@ -1903,7 +1908,7 @@ public partial class MainWindow : Window
             }, DispatcherPriority.Loaded);
 
             UpdateSummary(records);
-            StatusText.Text = outputCheckTimedOut ? "Output check timed out; check drive connections and try Refresh again." : isAutomaticRefresh
+            StatusText.Text = sourceCheckTimedOut ? "Source check timed out; check drive connections and try Refresh again." : isAutomaticRefresh
                 ? $"History updated automatically - {records.Count:N0} record(s)."
                 : $"{records.Count:N0} record(s) - {_databasePath}";
         }
@@ -1966,16 +1971,16 @@ public sealed record HistoryRow(
     string SpaceSaved,
     string DestinationFilename)
 {
-    public bool OutputMissingOnRefresh { get; init; }
+    public bool SourceMissingOnRefresh { get; init; }
     public Guid Id => Record.Id;
     public string SourcePath => Record.ReplacementPath ?? Record.SourcePath;
     public string DestinationPath => Record.DestinationPath;
     public string PlaybackPath => OutputAvailable ? DestinationPath : SourcePath;
-    public bool SourceAvailable => Record.ReplacementPath is not null || Record.SourceExists;
+    public bool SourceAvailable => !SourceMissingOnRefresh && (Record.ReplacementPath is not null || Record.SourceExists);
     public bool OutputAvailable => Record.FileActionStatus switch
     {
         "Source Replaced" or "Output Deleted" => false,
-        _ => Record.DestinationExists && !OutputMissingOnRefresh
+        _ => Record.DestinationExists
     };
     public bool CanRecycleOutput =>
         OutputAvailable &&

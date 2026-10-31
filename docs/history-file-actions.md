@@ -26,7 +26,7 @@ Selecting one row displays its completion time, file-action status, full source 
 
 Record Details remains at the bottom of the window. The compact row shows source and output paths side by side with truncation and full-path tooltips. Expand details to see selectable full paths and metrics in a separately scrollable area. With no selection or multiple selections it asks the user to select one item.
 
-The history grid has its own scrollbars and numbers the currently shown records. Press **Refresh** to check output paths: unavailable outputs are shaded grey, while selected rows retain their selection styling. An unavailable path can mean a missing file or a disconnected drive; the check does not alter files or stored history. If checking takes too long, the app reports a timeout instead of blocking the interface.
+The history grid has its own scrollbars and numbers the currently shown records. Press **Refresh** to check the current source path, including replacement paths: unavailable sources are shaded light grey, while selected rows retain their selection styling. An unavailable path can mean a missing file or a disconnected drive; the check does not alter files or stored history. If checking takes too long, the app reports a timeout instead of blocking the interface.
 
 Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
 
