@@ -19,6 +19,7 @@ public partial class MainWindow : Window
 {
     private readonly string _databasePath = StoragePaths.ResolveDatabasePath();
     private TimeSpan? _lastRefreshDuration;
+    private readonly Dictionary<Guid, bool> _outputAvailability = new();
     private readonly CompletedEncodeRepository _repository;
     private readonly HandBrakeDetector _handBrakeDetector = new();
     private readonly HandBrakeConnectionTester _connectionTester = new();
@@ -251,7 +252,7 @@ public partial class MainWindow : Window
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
     {
-        await LoadHistoryAsync();
+        await LoadHistoryAsync(checkOutputFiles: true);
         await RefreshRecoverySummaryAsync();
     }
 
@@ -740,7 +741,7 @@ public partial class MainWindow : Window
         }
 
         e.Handled = true;
-        PageScrollViewer.ScrollToVerticalOffset(PageScrollViewer.VerticalOffset - e.Delta);
+        // The history grid owns its scrolling; the details strip remains fixed.
     }
 
     private void HistoryGrid_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -814,7 +815,9 @@ public partial class MainWindow : Window
         }
 
         _historyView.Refresh();
-        ResultsCountText.Text = $"{_historyView.Cast<object>().Count():N0} shown";
+        var shownCount = _historyView.Cast<object>().Count();
+        HistoryGrid.AlternationCount = Math.Max(1, shownCount + 1);
+        ResultsCountText.Text = $"{shownCount:N0} shown";
 
         foreach (var selectedRow in HistoryGrid.SelectedItems.Cast<HistoryRow>()
                      .Where(row => !_historyView.Contains(row))
@@ -831,18 +834,21 @@ public partial class MainWindow : Window
         if (row is null)
         {
             DetailsContentGrid.Visibility = Visibility.Collapsed;
-            DetailsPlaceholderPanel.Visibility = Visibility.Visible;
-            DetailsPlaceholderTitle.Text = selectedCount > 1
-                ? $"Record details — {selectedCount:N0} items selected"
-                : "Record details";
+            DetailsPlaceholderText.Visibility = Visibility.Visible;
+            ExpandedDetails.Visibility = Visibility.Collapsed;
             DetailsPlaceholderText.Text = selectedCount > 1
                 ? "Multiple items selected. Select one item to view its record details."
                 : "Select one item to view its record details.";
             return;
         }
 
-        DetailsPlaceholderPanel.Visibility = Visibility.Collapsed;
+        DetailsPlaceholderText.Visibility = Visibility.Collapsed;
         DetailsContentGrid.Visibility = Visibility.Visible;
+        CompactSourceText.Text = row.SourcePath;
+        CompactSourceText.ToolTip = row.SourcePath;
+        CompactOutputText.Text = row.DestinationPath;
+        CompactOutputText.ToolTip = row.DestinationPath;
+        ExpandedDetails.Visibility = DetailsToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         DetailsCompletedText.Text = row.Completed;
         DetailsStatusText.Text = string.IsNullOrWhiteSpace(row.Status) ? "No file action" : row.Status;
         DetailsSourcePathTextBox.Text = row.SourcePath;
@@ -853,6 +859,21 @@ public partial class MainWindow : Window
             $"Exit code {row.Record.ExitCode}  |  " +
             $"source {(row.SourceAvailable ? "available" : "missing")}, " +
             $"output {(row.OutputAvailable ? "available" : "missing")}";
+    }
+
+    private void SetupButton_Click(object sender, RoutedEventArgs e) =>
+        SetupPanel.Visibility = SetupPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+
+    private void CloseSetupButton_Click(object sender, RoutedEventArgs e) =>
+        SetupPanel.Visibility = Visibility.Collapsed;
+
+    private void DetailsToggle_Click(object sender, RoutedEventArgs e)
+    {
+        var expanded = DetailsToggle.IsChecked == true;
+        DetailsToggle.Content = expanded ? "\uE70E" : "\uE70D";
+        DetailsToggle.ToolTip = expanded ? "Collapse details" : "Expand details";
+        System.Windows.Automation.AutomationProperties.SetName(DetailsToggle, expanded ? "Collapse record details" : "Expand record details");
+        ExpandedDetails.Visibility = expanded && GetSelectedRows().Count == 1 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void HistoryGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -1798,7 +1819,7 @@ public partial class MainWindow : Window
         StatusText.Text = result.Message;
     }
 
-    private async Task LoadHistoryAsync(bool isAutomaticRefresh = false)
+    private async Task LoadHistoryAsync(bool isAutomaticRefresh = false, bool checkOutputFiles = false)
     {
         if (_isLoadingHistory)
         {
@@ -1822,25 +1843,42 @@ public partial class MainWindow : Window
                 var states = await _replacementOperationRepository.GetLatestSourceReplacementStatesAsync();
                 return (loadedRecords, states);
             });
+            var outputCheckTimedOut = false;
+            if (checkOutputFiles)
+            {
+                StatusText.Text = "Checking output files...";
+                var checks = Task.Run(() => records.ToDictionary(record => record.Id, record => File.Exists(record.DestinationPath)));
+                if (await Task.WhenAny(checks, Task.Delay(TimeSpan.FromSeconds(8))) == checks)
+                {
+                    var availability = await checks;
+                    _outputAvailability.Clear();
+                    foreach (var item in availability) _outputAvailability[item.Key] = item.Value;
+                }
+                else
+                {
+                    outputCheckTimedOut = true;
+                    _outputAvailability.Clear();
+                }
+            }
             var refreshedRows = records.Select(record => HistoryRow.From(
                 record,
                 replacementStates.GetValueOrDefault(
                     record.Id,
-                    SourceReplacementState.NotReplaced))).ToArray();
+                    SourceReplacementState.NotReplaced)) with
+                    { OutputMissingOnRefresh = _outputAvailability.TryGetValue(record.Id, out var exists) && !exists }).ToArray();
 
             if (HistoryRows.SequenceEqual(refreshedRows))
             {
                 UpdateSummary(records);
                 if (!isAutomaticRefresh)
                 {
-                    StatusText.Text = $"{records.Count:N0} record(s) - {_databasePath}";
+                    StatusText.Text = outputCheckTimedOut ? "Output check timed out; check drive connections and try Refresh again." : $"{records.Count:N0} record(s) - {_databasePath}";
                 }
 
                 return;
             }
 
             var selectedRecordIds = GetSelectedRows().Select(row => row.Id).ToHashSet();
-            var pageOffset = PageScrollViewer.VerticalOffset;
             var gridScroller = FindVisualChild<ScrollViewer>(HistoryGrid);
             var gridOffset = gridScroller?.VerticalOffset ?? 0;
             HistoryRows.Clear();
@@ -1861,12 +1899,11 @@ public partial class MainWindow : Window
 
             await Dispatcher.InvokeAsync(() =>
             {
-                PageScrollViewer.ScrollToVerticalOffset(pageOffset);
                 gridScroller?.ScrollToVerticalOffset(gridOffset);
             }, DispatcherPriority.Loaded);
 
             UpdateSummary(records);
-            StatusText.Text = isAutomaticRefresh
+            StatusText.Text = outputCheckTimedOut ? "Output check timed out; check drive connections and try Refresh again." : isAutomaticRefresh
                 ? $"History updated automatically - {records.Count:N0} record(s)."
                 : $"{records.Count:N0} record(s) - {_databasePath}";
         }
@@ -1929,6 +1966,7 @@ public sealed record HistoryRow(
     string SpaceSaved,
     string DestinationFilename)
 {
+    public bool OutputMissingOnRefresh { get; init; }
     public Guid Id => Record.Id;
     public string SourcePath => Record.ReplacementPath ?? Record.SourcePath;
     public string DestinationPath => Record.DestinationPath;
@@ -1937,7 +1975,7 @@ public sealed record HistoryRow(
     public bool OutputAvailable => Record.FileActionStatus switch
     {
         "Source Replaced" or "Output Deleted" => false,
-        _ => Record.DestinationExists
+        _ => Record.DestinationExists && !OutputMissingOnRefresh
     };
     public bool CanRecycleOutput =>
         OutputAvailable &&

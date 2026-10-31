@@ -24,7 +24,9 @@ Column headers and the actual data text elements use the same 16-by-6 horizontal
 
 Selecting one row displays its completion time, file-action status, full source and output paths, size comparison, exit code, and current file availability. Automatic refresh first compares the latest database result with the displayed rows. It does not rebuild an unchanged list, and selected records remain selected when changed data is applied and they still match the active filter.
 
-The Record Details area always reserves the same fixed height. With no selection it asks the user to select one item. With multiple selections it reports the selected count and explains that one item is required for record-specific details. This prevents selection changes from resizing the completed-library area.
+Record Details remains at the bottom of the window. The compact row shows source and output paths side by side with truncation and full-path tooltips. Expand details to see selectable full paths and metrics in a separately scrollable area. With no selection or multiple selections it asks the user to select one item.
+
+The history grid has its own scrollbars and numbers the currently shown records. Press **Refresh** to check output paths: unavailable outputs are shaded grey, while selected rows retain their selection styling. An unavailable path can mean a missing file or a disconnected drive; the check does not alter files or stored history. If checking takes too long, the app reports a timeout instead of blocking the interface.
 
 Use Ctrl-click to add or remove individual rows, Shift-click to select a range, or Ctrl+A while the table is focused to select every shown row. **Select all shown** applies the current search and quick filter; **Clear selection** removes the selection. Playback, Explorer reveal, and the detailed recovery window remain single-record actions.
 

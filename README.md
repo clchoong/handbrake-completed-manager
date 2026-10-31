@@ -117,7 +117,9 @@ The current Phase 1 implementation provides:
 - Settings remain vertically scrollable at smaller window sizes and display scaling, and About reports the packaged version, MIT licence, independence notice, platform, runtime, storage boundary, and project links.
 - A shared high-end desktop design system provides a refined media-library dashboard, semantic status treatments, responsive cards and tables, and consistently rendered secondary windows across Windows 10 and Windows 11.
 - Completed-history headers and data text share 16-by-6 spacing, and the number cell uses the same blue selection state as the rest of its row. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values from 90% use the same treatment in red.
-- Record Details always reserves a fixed area; zero and multiple selections show guidance instead of changing the completed-library height.
+- Record Details stays at the bottom of the window, showing truncated source and output paths side by side; expand it for scrollable full paths and metrics. Zero and multiple selections show guidance.
+- HandBrake connection and completion capture setup are tucked under the top-bar Setup control.
+- **Refresh** checks output paths and shades unavailable records grey; a disconnected or slow drive can also make a file appear unavailable. The check never deletes history or media files.
 - After a separate path-specific confirmation, the verified original source can be moved to the Windows Recycle Bin. The operation re-hashes the source, backup, and promoted final file, persists intent before removal, fails instead of deleting permanently when recycling is unavailable, and recovers across either crash boundary.
 - A final read-only integrity gate atomically marks the journal and replacement operation complete while updating source availability in history. The Recovery overview opens the matching history record directly and exposes only actions valid for its persisted checkpoint.
 - Automated tests cover parsing, calculations, filtering, fingerprinting, persistence, duplicates, detection, connection state, file actions, guarded output recycling, and replacement-state presentation.
@@ -134,6 +136,7 @@ The current Phase 1 implementation provides:
 - [About and software information](docs/about.md): version, licence, independence, platform, runtime, storage, and notice links
 - [Portable release](docs/portable-release.md): package creation, Windows compatibility, storage modes, and verification
 - [Release readiness](docs/release-readiness.md): validated release-candidate checks, supported boundary, and reproducible commands
+- [Version 0.9.5 release notes](docs/releases/v0.9.5.md): fixed details strip, setup panel, scrolling, numbering, and output availability
 - [Version 0.9.4 release notes](docs/releases/v0.9.4.md): context menu, background refresh, diagnostics, and history backup/export
 - [Version 0.7.0 release notes](docs/releases/v0.7.0.md): simplified replacement, responsive bulk removal, Settings scrolling, and About
 - [Version 0.7.1 release notes](docs/releases/v0.7.1.md): same-extension source replacement and reliable first-paint progress dialogs

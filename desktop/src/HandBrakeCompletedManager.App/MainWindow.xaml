@@ -10,6 +10,7 @@
         MinWidth="1024"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <local:OneBasedIndexConverter x:Key="OneBasedIndexConverter" />
         <local:OutputPercentageHighlightConverter x:Key="OutputPercentageHighlightConverter" />
         <Style x:Key="NumberCellStyle"
@@ -38,11 +39,25 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="HistoryRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding OutputMissingOnRefresh}" Value="True" />
+                        <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#E8EBEF" />
+                    <Setter Property="Foreground" Value="#657080" />
+                    <Setter Property="ToolTip" Value="Output not found during refresh. The file may be missing or its drive unavailable." />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -67,7 +82,8 @@
                                Foreground="#AEB9CA"
                                Text="Permanent source-to-output history after HandBrake finishes" />
                 </StackPanel>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button x:Name="SetupButton" MinWidth="90" Margin="0,0,8,0" Background="#263650" BorderBrush="#3A4A63" Foreground="White" Content="Setup" Click="SetupButton_Click" ToolTip="HandBrake connection and completion capture setup" />
                     <Button x:Name="ArchiveButton" MinWidth="90" Margin="0,0,8,0" Background="#263650" BorderBrush="#3A4A63" Foreground="White" Content="History file" Click="ArchiveButton_Click" />
                     <Button x:Name="ImportLogsButton"
                             MinWidth="108"
@@ -107,20 +123,16 @@
                             Style="{StaticResource PrimaryButtonStyle}"
                             Click="RefreshButton_Click"
                             Content="Refresh" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
 
-        <ScrollViewer x:Name="PageScrollViewer"
-                      Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <Grid Margin="28,24,28,20">
+        <Grid Grid.Row="1" Margin="28,20,28,10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,16">
@@ -196,7 +208,13 @@
                     </Border>
                 </Grid>
 
-                <Border Grid.Row="1" Margin="0,0,0,16" Style="{StaticResource CardStyle}">
+                <Border x:Name="SetupPanel" Grid.Row="1" Grid.RowSpan="2" Margin="0,0,0,16" Padding="14" Background="#F8F9FC" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" Visibility="Collapsed">
+                  <StackPanel>
+                    <DockPanel Margin="4,0,4,10">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CompactButtonStyle}" Content="Close" Click="CloseSetupButton_Click" />
+                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" FontSize="16" Text="HandBrake setup" />
+                    </DockPanel>
+                <Border Margin="0,0,0,8" Style="{StaticResource CardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -242,7 +260,7 @@
                     </Grid>
                 </Border>
 
-                <Expander Grid.Row="2" Margin="0,0,0,16" IsExpanded="False">
+                <Expander IsExpanded="False">
                     <Expander.Header>
                         <Border Padding="18,14" Style="{StaticResource CardStyle}">
                             <Grid>
@@ -288,8 +306,10 @@
                         </Grid>
                     </Border>
                 </Expander>
+                  </StackPanel>
+                </Border>
 
-                <Border Grid.Row="3" MinHeight="360" Style="{StaticResource CardStyle}" Padding="0">
+                <Border Grid.Row="3" Style="{StaticResource CardStyle}" Padding="0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -388,7 +408,10 @@
                                   AutoGenerateColumns="False"
                                   IsReadOnly="True"
                                   CanUserAddRows="False"
-                                  AlternationCount="2147483647"
+                                  AlternationCount="1"
+                                  RowStyle="{StaticResource HistoryRowStyle}"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
                                   SelectionChanged="HistoryGrid_SelectionChanged"
@@ -433,53 +456,50 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <Border x:Name="DetailsPanel"
-                                Grid.Row="3"
-                                Height="160"
-                                Padding="18,14"
-                                Background="#F8F9FC"
-                                BorderBrush="{StaticResource LineBrush}"
-                                BorderThickness="0,1,0,0">
-                            <Grid>
-                                <Grid x:Name="DetailsContentGrid" Visibility="Collapsed">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="72" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8" Orientation="Horizontal">
-                                        <TextBlock FontWeight="SemiBold" Text="Record details" />
-                                        <TextBlock x:Name="DetailsCompletedText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
-                                        <TextBlock x:Name="DetailsStatusText" Margin="16,0,0,0" Foreground="{StaticResource InkMutedBrush}" />
-                                    </StackPanel>
-                                    <TextBlock Grid.Row="1" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="SOURCE" />
-                                    <TextBox x:Name="DetailsSourcePathTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
-                                    <TextBlock Grid.Row="2" VerticalAlignment="Center" Style="{StaticResource EyebrowStyle}" Text="OUTPUT" />
-                                    <TextBox x:Name="DetailsDestinationPathTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,4" BorderThickness="0" Background="Transparent" IsReadOnly="True" />
-                                    <TextBlock Grid.Row="3" Style="{StaticResource EyebrowStyle}" Text="METRICS" />
-                                    <TextBlock x:Name="DetailsMetricsText" Grid.Row="3" Grid.Column="1" Foreground="{StaticResource InkMutedBrush}" />
-                                </Grid>
-                                <StackPanel x:Name="DetailsPlaceholderPanel" VerticalAlignment="Center">
-                                    <TextBlock x:Name="DetailsPlaceholderTitle" FontWeight="SemiBold" Text="Record details" />
-                                    <TextBlock x:Name="DetailsPlaceholderText"
-                                               Margin="0,7,0,0"
-                                               Foreground="{StaticResource InkMutedBrush}"
-                                               Text="Select one item to view its record details."
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
                     </Grid>
                 </Border>
-            </Grid>
-        </ScrollViewer>
+        </Grid>
 
-        <Border Grid.Row="2" Padding="28,11" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Margin="28,0,28,10" Padding="16,10" Background="#F8F9FC" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+            <DockPanel LastChildFill="True">
+                <ToggleButton x:Name="DetailsToggle" DockPanel.Dock="Right" Width="30" Height="30" Margin="12,0,0,0" FontFamily="Segoe MDL2 Assets" Content="&#xE70D;" ToolTip="Expand details" AutomationProperties.Name="Expand record details" Click="DetailsToggle_Click">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="ArrowBorder" CornerRadius="15" BorderThickness="1" BorderBrush="{StaticResource LineBrush}" Background="White">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ArrowBorder" Property="Background" Value="#E9EDF5" /></Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Grid x:Name="DetailsContentGrid" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="Source" />
+                        <TextBlock x:Name="CompactSourceText" Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Margin="20,0,8,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="Output" />
+                        <TextBlock x:Name="CompactOutputText" Grid.Column="3" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <TextBlock x:Name="DetailsPlaceholderText" Text="Select one item to view its record details." TextTrimming="CharacterEllipsis" />
+                    <ScrollViewer x:Name="ExpandedDetails" Grid.Row="1" Height="160" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock x:Name="DetailsCompletedText" FontWeight="SemiBold" />
+                            <TextBlock x:Name="DetailsStatusText" Margin="0,4,0,8" />
+                            <TextBlock FontWeight="SemiBold" Text="Source" />
+                            <TextBox x:Name="DetailsSourcePathTextBox" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
+                            <TextBlock FontWeight="SemiBold" Text="Output" />
+                            <TextBox x:Name="DetailsDestinationPathTextBox" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
+                            <TextBlock x:Name="DetailsMetricsText" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="3" Padding="28,11" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
             <TextBlock x:Name="StatusText" Foreground="{StaticResource InkMutedBrush}" Text="Loading history..." />
         </Border>
     </Grid>

@@ -30,7 +30,7 @@ This keeps the normal path aligned with familiar cut-and-paste behavior. Legacy 
 
 The Status column uses plain-language file outcomes: **Output Deleted**, **Source Replaced**, and **Source Replaced, Output Kept**. A leading 1-based number follows the current filter and sort order; its selected state inherits the same blue as the other selected cells and uses white text. Header padding and the data TextBlock margin both use 16-by-6 spacing, ensuring values begin at the same inset as their titles. Output percentages from 80% to 89% use the solid Replace Source orange with white text; values at or above 90% use the equivalent red treatment regardless of row selection.
 
-Record Details occupies a fixed 160-pixel area. Its single-record content is replaced by zero-selection or multiple-selection guidance without collapsing the area, so the table and surrounding window do not jump when selection cardinality changes.
+Record Details is anchored below the table. Its compact row shows source and output paths side by side; an expansion control reveals scrollable full paths and metrics. Zero-selection and multiple-selection guidance replaces the paths without moving the panel.
 
 Bulk replacement has a single resizable progress surface. It combines a continuously updated overall bar and `processed/total` counter with a byte-based bar and status for every eligible file. The overall percentage includes the active item's fractional byte progress while keeping completed, failed, cancelled, waiting, and skipped items visible together.
 
@@ -41,7 +41,7 @@ The interface preserves native window chrome, keyboard navigation, default/cance
 ## Scaling and compatibility
 
 - The main dashboard defaults to 1400 × 900 and supports a minimum 1024-pixel width.
-- At reduced height, the workspace scrolls vertically while the completed-library table retains a usable minimum height.
+- The completed-library table scrolls independently while the details strip remains visible. HandBrake connection and capture setup are available from the top-bar Setup control.
 - Action groups wrap instead of clipping at narrower widths.
 - The replacement review uses a scrollable content surface so all safety information and recovery controls remain reachable.
 - No design dependency raises the existing Windows 10 build 17763 minimum target.
