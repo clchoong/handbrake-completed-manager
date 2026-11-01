@@ -30,7 +30,7 @@ public sealed class HandBrakeConnectionTesterTests
             var result = await tester.TestAsync(installation);
 
             Assert.True(result.IsSuccess, result.Message);
-            Assert.Contains("reached SQLite", result.Message);
+            Assert.Contains("HandBrake setup and the receiver were not tested", result.Message);
         }
         finally
         {

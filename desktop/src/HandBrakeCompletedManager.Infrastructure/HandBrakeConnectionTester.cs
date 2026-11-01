@@ -36,7 +36,7 @@ public sealed class HandBrakeConnectionTester
             var records = await repository.GetAllAsync(cancellationToken);
 
             return inserted && records.Count == 1
-                ? new ConnectionTestResult(true, "Connection test passed. The simulated event reached SQLite.")
+                ? new ConnectionTestResult(true, "App storage test passed. HandBrake setup and the receiver were not tested.")
                 : new ConnectionTestResult(false, "The simulated completion event was not persisted correctly.");
         }
         catch (Exception exception) when (

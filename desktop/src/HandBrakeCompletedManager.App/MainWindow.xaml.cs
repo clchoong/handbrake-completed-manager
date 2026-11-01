@@ -68,7 +68,7 @@ public partial class MainWindow : Window
         ReceiverPathTextBox.Text = completionSetup.ReceiverPath;
         ReceiverArgumentsTextBox.Text = completionSetup.Arguments;
         ReceiverStatusText.Text = completionSetup.ReceiverExists
-            ? "Receiver ready - copy these values into HandBrake"
+            ? "Receiver found - HandBrake setup must be completed manually"
             : "Receiver is missing - rebuild the desktop solution before setup";
         _repository = new CompletedEncodeRepository(_databasePath);
         _replacementOperationRepository = new ReplacementOperationRepository(_databasePath);
@@ -507,7 +507,7 @@ public partial class MainWindow : Window
         try
         {
             SetConnectionControlsEnabled(false);
-            ConnectionStatusText.Text = "Testing connection...";
+            ConnectionStatusText.Text = "Testing app storage...";
             var result = await _connectionTester.TestAsync(installation);
 
             if (result.IsSuccess)
@@ -515,8 +515,14 @@ public partial class MainWindow : Window
                 await _connectionStore.SaveConnectedAsync(installation.ExecutablePath, DateTimeOffset.UtcNow);
             }
 
-            ConnectionStatusText.Text = result.IsSuccess ? "Pipeline test passed" : "Pipeline test failed";
+            ConnectionStatusText.Text = result.IsSuccess ? "App storage test passed; HandBrake setup not verified" : "App storage test failed";
             StatusText.Text = result.Message;
+            System.Windows.MessageBox.Show(this,
+                result.IsSuccess
+                    ? "The app saved a simulated history record in a temporary database.\n\nThis does not check HandBrake's Send file to setting or run the receiver. Follow Completion capture setup, then finish a short new encode and check the library."
+                    : $"The app storage test failed.\n\n{result.Message}",
+                "App storage test", MessageBoxButton.OK,
+                result.IsSuccess ? MessageBoxImage.Information : MessageBoxImage.Warning);
             _ = _logger.LogAsync(
                 result.IsSuccess ? DiagnosticLogLevel.Information : DiagnosticLogLevel.Warning,
                 result.IsSuccess ? "HandBrake pipeline test passed." : "HandBrake pipeline test failed.");
@@ -609,8 +615,8 @@ public partial class MainWindow : Window
             ConnectionStatusText.Text = !installation.Exists
                 ? "Saved HandBrake location is missing"
                 : connection?.IsConnected == true
-                    ? $"Pipeline tested {connection.LastTestedUtc?.ToLocalTime():g}"
-                    : "Detected - pipeline not tested";
+                    ? $"App storage tested {connection.LastTestedUtc?.ToLocalTime():g}; HandBrake setup not verified"
+                    : "Detected; HandBrake setup not verified";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

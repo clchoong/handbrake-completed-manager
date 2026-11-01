@@ -230,7 +230,7 @@
                                        Text="&#xE968;" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="HandBrake connection" />
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="HandBrake installation" />
                             <TextBlock x:Name="ConnectionStatusText" Margin="0,3,0,0" Style="{StaticResource MutedTextStyle}" Text="Not checked" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
@@ -254,7 +254,8 @@
                             <Button x:Name="TestConnectionButton"
                                     Style="{StaticResource SoftAccentButtonStyle}"
                                     Click="TestConnectionButton_Click"
-                                    Content="Test pipeline"
+                                    Content="Test app storage"
+                                    ToolTip="Tests simulated history storage only. Does not check HandBrake preferences or run an encode."
                                     IsEnabled="False" />
                         </StackPanel>
                     </Grid>
@@ -286,6 +287,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110" />
@@ -296,13 +298,16 @@
                                        Grid.ColumnSpan="3"
                                        Margin="0,0,0,14"
                                        Style="{StaticResource MutedTextStyle}"
-                                       Text="In HandBrake, open Tools > Preferences > When Done. Under Encode Completed, enable Send File To, then use the executable and arguments below." />
+                                       TextWrapping="Wrap"
+                                       Text="1. In HandBrake, open Tools > Preferences > When Done.&#x0a;2. Under Encode Completed, check Send file to. Click Browse and select the receiver executable below (not the Manager app).&#x0a;3. Copy the arguments below into HandBrake’s Arguments box. Return from Preferences." />
                             <TextBlock Grid.Row="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="Executable" />
                             <TextBox x:Name="ReceiverPathTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,10,8" IsReadOnly="True" />
                             <Button Grid.Row="1" Grid.Column="2" Margin="0,0,0,8" Style="{StaticResource CompactButtonStyle}" Click="CopyReceiverPathButton_Click" Content="Copy path" />
                             <TextBlock Grid.Row="2" VerticalAlignment="Center" FontWeight="SemiBold" Text="Arguments" />
                             <TextBox x:Name="ReceiverArgumentsTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0" IsReadOnly="True" />
                             <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource CompactButtonStyle}" Click="CopyReceiverArgumentsButton_Click" Content="Copy args" />
+                            <TextBlock Grid.Row="3" Grid.ColumnSpan="3" Margin="0,12,0,0" TextWrapping="Wrap" Style="{StaticResource MutedTextStyle}"
+                                       Text="4. Run a short new encode in HandBrake. Open the Manager and click Refresh. Seeing that encode in Completed library confirms automatic capture. For older jobs, use Import logs.&#x0a;The app storage test is only a simulation; it does not verify the HandBrake setting or the receiver." />
                         </Grid>
                     </Border>
                 </Expander>

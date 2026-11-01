@@ -26,7 +26,7 @@ Start menu shortcut resolution is not currently implemented.
 
 ## Saved connections
 
-A connection is saved only after **Test Pipeline** succeeds. Connection state is stored at:
+A previously tested installation is saved after **Test app storage** succeeds. This is not a verified HandBrake connection. The saved state is stored at:
 
 ```text
 %LOCALAPPDATA%\HandBrake Completed Manager\handbrake-connections.json
@@ -36,7 +36,7 @@ When `HBCM_DATA_DIRECTORY` is set, the connection file is stored there instead. 
 
 ## Pipeline validation
 
-**Test Pipeline** performs the following non-destructive validation:
+**Test app storage** performs the following non-destructive validation:
 
 1. Confirm the selected `HandBrake.exe` still exists.
 2. Create an isolated database under the Windows temporary directory.
@@ -44,9 +44,9 @@ When `HBCM_DATA_DIRECTORY` is set, the connection file is stored there instead. 
 4. Pass the event through capture, duplicate identity, SQLite insertion, and query code.
 5. Confirm exactly one record was persisted.
 6. Close SQLite and remove the temporary database.
-7. Save the selected installation as connected only when every step succeeds.
+7. Remember the selected installation and test time only when every step succeeds.
 
-The test never writes a fake row into the real completed history and never modifies HandBrake files or preferences.
+The test never writes a fake row into the real completed history and never modifies HandBrake files or preferences. It does not run the receiver or check HandBrake's configured completion action. A passed test cannot establish that automatic capture is set up; verify that with a new successful encode.
 
 ## HandBrake configuration
 

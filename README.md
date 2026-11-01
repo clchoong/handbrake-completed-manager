@@ -80,7 +80,7 @@ The current Phase 1 implementation provides:
 - **History file** saves a consistent SQLite backup or exports history as JSON. Exported records contain file paths; choose a private destination. Existing files are never overwritten.
 - About displays a snapshot of current app memory, history count, and the last refresh duration. File open and reveal actions run off the interface thread and report inaccessible paths.
 - Installed, running, portable, saved, and manually selected HandBrake copies can be discovered.
-- Test Pipeline validates the event-to-SQLite path in an isolated temporary database.
+- Test app storage simulates a history event in an isolated temporary database; it does not run the receiver or verify HandBrake's settings. Confirm capture with a new completed encode.
 - An in-app guide provides the exact HandBrake completion-action executable and arguments.
 - Selected history records support source/output playback and Explorer reveal; double-click opens the output, or the replacement file after the output has been consumed.
 - Multi-term search, quick filters, correctly typed column sorting, live row numbering, result counts, and record details support history review.
