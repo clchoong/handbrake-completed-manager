@@ -69,7 +69,7 @@ public partial class ReplacementProgressWindow : Window
             StageText.Text = "Replacement stopped";
             ProgressText.Text = "No further steps will run";
             PercentageText.Text = string.Empty;
-            OutcomeText.Text = $"{exception.Message} Close this window and try again.";
+            OutcomeText.Text = $"{exception.Message} Check the listed files before retrying; do not delete a temporary or final file until you know which copies remain.";
             OutcomeText.Foreground = MediaBrushes.DarkRed;
         }
         finally

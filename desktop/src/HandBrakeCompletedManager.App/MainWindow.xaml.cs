@@ -1000,7 +1000,7 @@ public partial class MainWindow : Window
             }
             else if (progressWindow.Failure is not null)
             {
-                StatusText.Text = $"Source replacement stopped: {progressWindow.Failure.Message} You can try again.";
+                StatusText.Text = $"Source replacement stopped: {progressWindow.Failure.Message} Check the files before retrying.";
                 _ = _logger.LogAsync(
                     DiagnosticLogLevel.Warning,
                     "The direct source replacement workflow stopped.",

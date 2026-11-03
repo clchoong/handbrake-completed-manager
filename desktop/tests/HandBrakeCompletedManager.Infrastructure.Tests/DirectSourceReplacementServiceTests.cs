@@ -6,6 +6,133 @@ namespace HandBrakeCompletedManager.Infrastructure.Tests;
 
 public sealed class DirectSourceReplacementServiceTests
 {
+    [Theory]
+    [InlineData(".avi", ".mp4")]
+    [InlineData(".mp4", ".mkv")]
+    [InlineData(".mkv", ".webm")]
+    [InlineData(".avi", ".m4v")]
+    [InlineData(".mkv", ".mkv")]
+    public async Task ReplaceAsync_SupportsMatchingAndDifferentFormats(string sourceExtension, string outputExtension)
+    {
+        using var fixture = await Fixture.CreateAsync(sourceExtension, outputExtension);
+
+        var result = await fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false);
+
+        Assert.Equal(fixture.ReplacementPath, result.ReplacementPath, ignoreCase: true);
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(result.ReplacementPath));
+        Assert.False(File.Exists(fixture.OutputPath));
+        if (!string.Equals(sourceExtension, outputExtension, StringComparison.OrdinalIgnoreCase))
+            Assert.False(File.Exists(fixture.SourcePath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_EmptyOutputAtFinalPathDoesNotDeleteSource()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4", outputAlreadyAtReplacementPath: true);
+        await File.WriteAllBytesAsync(fixture.OutputPath, []);
+
+        await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false));
+        Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.SourcePath));
+        Assert.True(File.Exists(fixture.OutputPath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_FinalPathAppearingDuringTransferPreservesSourceAndRestoresOutput()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        var unrelated = new byte[] { 4, 5, 6 };
+        var progress = new SynchronousProgress(value =>
+        {
+            if (value.Stage == DirectReplacementStage.Installing)
+                File.WriteAllBytes(fixture.ReplacementPath, unrelated);
+        });
+
+        await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false, progress));
+        Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.SourcePath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+        Assert.Equal(unrelated, await File.ReadAllBytesAsync(fixture.ReplacementPath));
+    }
+
+    private sealed class SynchronousProgress(Action<DirectReplacementProgress> report) : IProgress<DirectReplacementProgress>
+    {
+        public void Report(DirectReplacementProgress value) => report(value);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_KeepOutputAndLockedSourcePreservesBothCopies()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        await using var heldSource = new FileStream(fixture.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: true));
+        Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.SourcePath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.ReplacementPath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_ChangedSourceIsNotDeletedAndOutputIsRestored()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        var changedSource = new byte[] { 1, 9, 2 };
+        var progress = new SynchronousProgress(value =>
+        {
+            if (value.Stage == DirectReplacementStage.Installing)
+                File.WriteAllBytes(fixture.SourcePath, changedSource);
+        });
+
+        await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false, progress));
+        Assert.Equal(changedSource, await File.ReadAllBytesAsync(fixture.SourcePath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+        Assert.False(File.Exists(fixture.ReplacementPath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_DifferentExtensionLockedSourceRestoresMovedOutput()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        await using (var heldSource = new FileStream(fixture.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var error = await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false));
+            Assert.Contains("Replacement stopped", error.Message);
+            Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.SourcePath));
+            Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+            Assert.False(File.Exists(fixture.ReplacementPath));
+        }
+
+        var retry = await fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false);
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(retry.ReplacementPath));
+        Assert.False(File.Exists(fixture.SourcePath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_ExistingTemporaryFileIsNeverDeletedOnRetry()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        var temporary = $"{fixture.ReplacementPath}.{fixture.Record.Id:N}.hbcm-direct";
+        var existingBytes = new byte[] { 1, 2, 3, 4 };
+        await File.WriteAllBytesAsync(temporary, existingBytes);
+
+        var error = await Assert.ThrowsAsync<IOException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false));
+        Assert.Contains("needs review", error.Message);
+        Assert.Equal(existingBytes, await File.ReadAllBytesAsync(temporary));
+        Assert.Equal(fixture.SourceBytes, await File.ReadAllBytesAsync(fixture.SourcePath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_MissingSourceAndOccupiedFinalNeverDeletesOutput()
+    {
+        using var fixture = await Fixture.CreateAsync(".avi", ".mp4");
+        File.Delete(fixture.SourcePath);
+        var unrelated = new byte[] { 9, 8, 7 };
+        await File.WriteAllBytesAsync(fixture.ReplacementPath, unrelated);
+
+        await Assert.ThrowsAsync<FileNotFoundException>(() => fixture.Service.ReplaceAsync(fixture.Record, keepOutput: false));
+        Assert.Equal(unrelated, await File.ReadAllBytesAsync(fixture.ReplacementPath));
+        Assert.Equal(fixture.OutputBytes, await File.ReadAllBytesAsync(fixture.OutputPath));
+    }
+
     [Fact]
     public async Task ReplaceAsync_DefaultMovesOutputAndPermanentlyReplacesSource()
     {
